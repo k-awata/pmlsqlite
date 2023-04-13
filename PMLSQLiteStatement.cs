@@ -1,5 +1,4 @@
-﻿using System;
-using System.Data.SQLite;
+﻿using System.Data.SQLite;
 using Aveva.Core.PMLNet;
 
 namespace PMLSQLite
