@@ -1,0 +1,462 @@
+﻿!!PMLSQLITEPATH()
+import '$!!PMLSQLITEPATH'
+handle any
+endhandle
+
+-- PMLSQLITEORM object provides ORM between PML objects and SQLite3 database.
+define object PMLSQLITEORM
+    using namespace 'PMLSQLite'
+    member .conn is PMLSQLite
+    member .pkey is STRING
+endobject
+
+-- pmlsqliteorm constructor creates a new PMLSQLITEORM object connected to an in-memory database.
+define method .PMLSQLITEORM()
+    !this.pmlsqliteorm(':memory:')
+endmethod
+
+-- pmlsqliteorm constructor creates a new PMLSQLITEORM object connected to the specified file database.
+define method .PMLSQLITEORM(!filename is STRING)
+    using namespace 'PMLSQLite'
+    !this.conn = object PMLSQLite()
+    !this.conn.SetDataSource(!filename)
+    !this.pkey = 'id'
+endmethod
+
+-- FormatObject method returns the formatted string used for SQL from the specified object.
+define method .FormatObject(!object is ANY) is STRING
+    !type = !object.ObjectType()
+    if !object.Unset() then
+        return 'NULL'
+    elseif !type eq 'STRING' then
+        return !object
+    elseif !type eq 'REAL' then
+        return !object.Value().String().Replace('EX', 'e')
+    elseif !type eq 'BOOLEAN' then
+        return !object.String().Upcase()
+    elseif !type eq 'DATETIME' then
+        return !object.Year().String() $
+            + '-' + Substring('0' + !object.Month().String(), -2, 2) $
+            + '-' + Substring('0' + !object.Date().String(), -2, 2) $
+            + ' ' + Substring('0' + !object.Hour().String(), -2, 2) $
+            + ':' + Substring('0' + !object.Minute().String(), -2, 2) $
+            + ':' + Substring('0' + !object.Second().String(), -2, 2)
+    endif
+    return !object.String()
+endmethod
+
+-- ParseDateTime method returns a DATETIME object from a text in ISO-8601 format.
+define method .ParseDateTime(!datetime is STRING) is DATETIME
+    !date = !datetime.Before(' ')
+    !time = !datetime.After(' ')
+    if !date.Match(':') ne 0 then
+        !date = ''
+        !time = !datetime
+    endif
+
+    !year = !date.Part(1, '-').Real()
+    if !year.Unset() then
+        !year = 1901
+    endif
+    !month = !date.Part(2, '-').Real()
+    if !month.Unset() then
+        !month = 1
+    endif
+    !day = !date.Part(3, '-').Real()
+    if !day.Unset() then
+        !day = 1
+    endif
+    !hour = !time.Part(1, ':').Real()
+    if !hour.Unset() then
+        !hour = 0
+    endif
+    !minute = !time.Part(2, ':').Real()
+    if !minute.Unset() then
+        !minute = 0
+    endif
+    !second = !time.Part(3, ':').Real()
+    if !second.Unset() then
+        !second = 0
+    endif
+
+    return object DATETIME(!year, !month, !day, !hour, !minute, !second)
+endmethod
+
+-- ConvertToDictionary method returns a DICTIONARY object converted from a JSON string.
+-- If !null flag is false, it omits keys with the null value.
+define method .ConvertToDictionary(!json is STRING, !null is BOOLEAN) is DICTIONARY
+    !dict = object DICTIONARY()
+    if !json.Unset() or !json eq '' then
+        return !dict
+    endif
+    !j = object JSON()
+    !j.Parse(!json, !dict)
+    return !this.ConvertToDictionary(!dict, !null)
+endmethod
+
+-- ConvertToDictionary method returns the copied DICTIONARY object from a given DICTIONARY object.
+-- If !null flag is false, it omits keys with the null value.
+define method .ConvertToDictionary(!src is DICTIONARY, !null is BOOLEAN) is DICTIONARY
+    !dict = object DICTIONARY()
+    do !i to !src.keys.Size()
+        !value = !src.values[!i]
+        if !null or !value.Set() then
+            !dict.SetValue(!src.keys[!i], !value, true)
+        endif
+        !value.Delete()
+    enddo
+    return !dict
+endmethod
+
+-- ConvertToDictionary method returns a DICTIONARY object converted from a PML object.
+-- If !null flag is false, it omits keys with the null value.
+define method .ConvertToDictionary(!object is ANY, !null is BOOLEAN) is DICTIONARY
+    !dict = object DICTIONARY()
+    do !key values !object.Attributes()
+        !value = !object.Attribute(!key)
+        if !null or !value.Set() then
+            !dict.SetValue(!key.LowCase(), !value, true)
+        endif
+        !value.Delete()
+    enddo
+    return !dict
+endmethod
+
+define method .replaceSQLPlaceHolders(!sql is ARRAY) is ARRAY
+    !replaced = object ARRAY()
+    !count = 1
+    do !s values !sql
+        do
+            break if !s.Match('?') eq 0
+            !s = !s.Replace('?', '@' + !count.String(), 1, 1)
+            !count = !count + 1
+        enddo
+        !replaced.Append(!s)
+    enddo
+    return !replaced
+endmethod
+
+-- Execute method executes the specified SQL statement.
+define method .Execute(!sql is STRING)
+    !array[1] = !sql
+    !this.Execute(!array, object ARRAY())
+endmethod
+
+-- Execute method executes the specified SQL statement.
+-- The SQL statement is bound to the specified parameter values.
+define method .Execute(!sql is STRING, !param is ARRAY)
+    !array[1] = !sql
+    !this.Execute(!array, !param)
+endmethod
+
+-- Execute method executes the specified SQL statement.
+define method .Execute(!sql is ARRAY)
+    !this.Execute(!sql, object ARRAY())
+endmethod
+
+-- Execute method executes the specified SQL statement.
+-- The SQL statement is bound to the specified parameter values.
+define method .Execute(!sql is ARRAY, !param is ARRAY)
+    if not !this.conn.IsOpen() then
+        !this.conn.Open()
+    endif
+    !stmt = !this.conn.Prepare(!this.ReplaceSQLPlaceHolders(!sql))
+    do !i to !param.Size()
+        !stmt.Bind('@' + !i.String(), !param[!i])
+    enddo
+    !stmt.Execute()
+    if !this.conn.FileName() ne '' and !this.conn.AutoCommit() then
+        !this.conn.Close()
+    endif
+endmethod
+
+-- Query method executes the specified SQL statement and returns the result as an array of objects of the specified type.
+define method .Query(!sql is STRING, !objtype is STRING) is ARRAY
+    !array[1] = !sql
+    return !this.Query(!array, !objtype, object ARRAY())
+endmethod
+
+-- Query method executes the specified SQL statement and returns the result as an array of objects of the specified type.
+-- The SQL statement is bound to the specified parameter values.
+define method .Query(!sql is STRING, !objtype is STRING, !param is ARRAY) is ARRAY
+    !array[1] = !sql
+    return !this.Query(!array, !objtype, !param)
+endmethod
+
+-- Query method executes the specified SQL statement and returns the result as an array of objects of the specified type.
+define method .Query(!sql is ARRAY, !objtype is STRING) is ARRAY
+    return !this.Query(!sql, !objtype, object ARRAY())
+endmethod
+
+-- Query method executes the specified SQL statement and returns the result as an array of objects of the specified type.
+-- The SQL statement is bound to the specified parameter values.
+define method .Query(!sql is ARRAY, !objtype is STRING, !param is ARRAY) is ARRAY
+    if not !this.conn.IsOpen() then
+        !this.conn.Open()
+    endif
+    !stmt = !this.conn.Prepare(!this.ReplaceSQLPlaceHolders(!sql))
+    do !i to !param.Size()
+        !stmt.Bind('@' + !i.String(), !param[!i])
+    enddo
+    !result = !stmt.Query()
+
+    -- Fetch records
+    !records = object ARRAY()
+    !columns = !result.ColumnNames()
+    do
+        break if not !result.Read()
+        !object = object $!<objtype>()
+        if !objtype eq 'STRING' then
+            !object = !result.Fetch(!columns[1])
+        elseif !objtype eq 'REAL' then
+            !object = !result.Fetch(!columns[1]).Real()
+        elseif !objtype eq 'BOOLEAN' then
+            !object = !result.Fetch(!columns[1]).Real().Boolean()
+        elseif !objtype eq 'DATETIME' then
+            !object = !this.ParseDateTime(!result.Fetch(!columns[1]))
+        elseif !objtype eq 'DBREF' then
+            !object = !result.Fetch(!columns[1]).DBRef()
+        elseif !objtype eq 'ARRAY' then
+            !object = !result.FetchRow()
+        elseif !objtype eq 'DICTIONARY' then
+            !object.keys = !columns
+            !object.values = !result.FetchRow()
+        else
+            do !key values !columns
+                !atty = !object.Attribute(!key).ObjectType()
+                handle any
+                    skip
+                endhandle
+                if !atty eq 'STRING' then
+                    !object.$!<key> = !result.Fetch(!key)
+                elseif !atty eq 'BOOLEAN' then
+                    !object.$!<key> = !result.Fetch(!key).Real().Boolean()
+                elseif !atty eq 'DATETIME' then
+                    !object.$!<key> = !this.ParseDateTime(!result.Fetch(!key))
+                else
+                    !object.$!<key> = object $!<atty>(!result.Fetch(!key))
+                    handle any
+                    endhandle
+                endif
+            enddo
+        endif
+        !records.Append(!object)
+    enddo
+    !result.Close()
+
+    if !this.conn.FileName() ne '' and !this.conn.AutoCommit() then
+        !this.conn.Close()
+    endif
+    return !records
+endmethod
+
+-- BeginTransaction method starts a transaction.
+define method .BeginTransaction()
+    !sql = object ARRAY()
+    !sql.Append('BEGIN')
+    !this.Execute(!sql)
+endmethod
+
+-- Commit method saves the changes of the transaction.
+define method .Commit()
+    !sql = object ARRAY()
+    !sql.Append('COMMIT')
+    !this.Execute(!sql)
+endmethod
+
+-- Rollback method undoes the transaction.
+define method .Rollback()
+    !sql = object ARRAY()
+    !sql.Append('ROLLBACK')
+    !this.Execute(!sql)
+endmethod
+
+-- CreateTable method creates a table with the specified name and the definition as the specified PML object.
+-- If the force flag is true, it attempts to drop the table before creating it.
+define method .CreateTable(!table is STRING, !schema is ANY, !force is BOOLEAN)
+    !sql = object ARRAY()
+
+    -- Drop table if force is true
+    if !force then
+        !sql.Append('DROP TABLE IF EXISTS "' + !table.Replace('"', '') + '";')
+    endif
+
+    -- Create table
+    !sql.Append('CREATE TABLE IF NOT EXISTS "' + !table.Replace('"', '') + '" (')
+    if !schema.ObjectType() eq 'ARRAY' then
+        !data = !this.ConvertToDictionary(!schema[1], true)
+    else
+        !data = !this.ConvertToDictionary(!schema, true)
+    endif
+    do !i to !data.keys.Size()
+        !buf = '"' + !data.keys[!i] + '" '
+        !type = !data.values[!i].ObjectType()
+        if !data.keys[!i] eq !this.pkey then
+            !buf = !buf + 'INTEGER PRIMARY KEY'
+        elseif !type eq 'BOOLEAN' then
+            !buf = !buf + 'INTEGER'
+        elseif !type eq 'REAL' then
+            !buf = !buf + 'REAL'
+        else
+            !buf = !buf + 'TEXT'
+        endif
+        if !i ne !data.keys.Size() then
+            !buf = !buf + ','
+        endif
+        !sql.Append(!buf)
+    enddo
+    !sql.Append(');')
+
+    !this.Execute(!sql)
+endmethod
+
+-- DropTable method removes the specified table.
+define method .DropTable(!table is STRING)
+    !sql = object ARRAY()
+    !sql.Append('DROP TABLE IF EXISTS "' + !table.Replace('"', '') + '"')
+    !this.Execute(!sql)
+endmethod
+
+-- Insert method writes a new record with the specified PML object values into the specified table.
+define method .Insert(!table is STRING, !record is ANY)
+    !sql = object ARRAY()
+    !bind = object ARRAY()
+
+    !data = !this.ConvertToDictionary(!record, false)
+    if !data.keys.Empty() then
+        !sql.Append('INSERT INTO "' + !table.Replace('"', '') + '" DEFAULT VALUES')
+        !this.Execute(!sql, !bind)
+        return
+    endif
+    !sql.Append('INSERT INTO "' + !table.Replace('"', '') + '" ("' + !data.keys.Join('","') + '") VALUES')
+
+    !buf = '('
+    do !i to !data.keys.Size()
+        !buf = !buf + '?'
+        if !i ne !data.keys.Size() then
+            !buf = !buf + ','
+        endif
+        !bind.Append(!this.FormatObject(!data.values[!i]))
+    enddo
+    !buf = !buf + ')'
+    !sql.Append(!buf)
+
+    !this.Execute(!sql, !bind)
+endmethod
+
+-- Insert method writes new records with an array of the specified PML objects into the specified table.
+define method .Insert(!table is STRING, !records is ARRAY)
+    !sql = object ARRAY()
+
+    !columns = !this.ConvertToDictionary(!records[1], true).keys
+    !sql.Append('INSERT INTO "' + !table.Replace('"', '') + '" ("' + !columns.Join('","') + '") VALUES')
+
+    do !r to !records.Size()
+        !data = !this.ConvertToDictionary(!records[!r], true)
+        !buf = '('
+        do !i to !columns.Size()
+            !value = !data.values[!data.keys.FindFirst(!columns[!i])]
+            if !value.Unset() or !value.ObjectType() inset('REAL', 'BOOLEAN') then
+                !buf = !buf + !this.FormatObject(!value)
+            else
+                !buf = !buf + |'| + !this.FormatObject(!value) + |'|
+            endif
+            if !i ne !columns.Size() then
+                !buf = !buf + ','
+            endif
+            !value.Delete()
+        enddo
+        !buf = !buf + ')'
+        if !r ne !records.Size() then
+            !buf = !buf + ','
+        endif
+        !sql.Append(!buf)
+    enddo
+
+    !this.Execute(!sql)
+endmethod
+
+define method .buildWhereClause(!columns is ARRAY) is ARRAY
+    !sql = object ARRAY()
+    if !columns.Empty() then
+        return !sql
+    endif
+    !sql.Append('WHERE')
+    do !i to !columns.Size()
+        !buf = '"' + !columns[!i] + '" = ?'
+        if !i ne !columns.Size() then
+            !buf = !buf + ' AND'
+        endif
+        !sql.Append(!buf)
+    enddo
+    return !sql
+endmethod
+
+-- Update method modifies the existing record with the specified PML object values.
+-- Only records that match the specified where condition are updated.
+define method .Update(!table is STRING, !set is ANY, !where is ANY)
+    !sql = object ARRAY()
+    !bind = object ARRAY()
+
+    !sql.Append('UPDATE "' + !table.Replace('"', '') + '" SET')
+    !data = !this.ConvertToDictionary(!set, false)
+    do !i to !data.keys.Size()
+        !value = !this.FormatObject(!data.values[!i])
+        skip if !value eq 'NULL'
+        !buf = '"' + !data.keys[!i] + '" = ?'
+        if !i ne !data.keys.Size() then
+            !buf = !buf + ','
+        endif
+        !sql.Append(!buf)
+        !bind.Append(!value)
+    enddo
+
+    !cond = !this.ConvertToDictionary(!where, false)
+    !sql.AppendArray(!this.buildWhereClause(!cond.keys))
+    !bind.AppendArray(!cond.values)
+
+    !this.Execute(!sql, !bind)
+endmethod
+
+-- Delete method deletes the existing records from the specified table.
+-- Only records that match the specified where condition are deleted.
+define method .Delete(!table is STRING, !where is ANY)
+    !sql = object ARRAY()
+    !sql.Append('DELETE FROM "' + !table.Replace('"', '') + '"')
+    !cond = !this.ConvertToDictionary(!where, false)
+    !sql.AppendArray(!this.buildWhereClause(!cond.keys))
+    !this.Execute(!sql, !cond.values)
+endmethod
+
+-- Select method returns an array of data as objects of the specified type from the specified table.
+define method .Select(!table is STRING, !objtype is STRING) is ARRAY
+    return !this.Select(!table, !objtype, '')
+endmethod
+
+-- Select method returns an array of data as objects of the specified type from the specified table.
+-- Only records that match the specified where condition are extracted.
+define method .Select(!table is STRING, !objtype is STRING, !where is ANY) is ARRAY
+    !sql = object ARRAY()
+    !sql.Append('SELECT * FROM "' + !table.Replace('"', '') + '"')
+    !cond = !this.ConvertToDictionary(!where, false)
+    !sql.AppendArray(!this.buildWhereClause(!cond.keys))
+    return !this.Query(!sql, !objtype, !cond.values)
+endmethod
+
+-- Select method returns an array of data as string or array of the specified columns from the specified table.
+define method .Select(!table is STRING, !columns is ARRAY) is ARRAY
+    return !this.Select(!table, !columns, '')
+endmethod
+
+-- Select method returns an array of data as string or array of the specified columns from the specified table.
+-- Only records that match the specified where condition are extracted.
+define method .Select(!table is STRING, !columns is ARRAY, !where is ANY) is ARRAY
+    !sql = object ARRAY()
+    !sql.Append('SELECT ' + !columns.Join(',') + ' FROM "' + !table.Replace('"', '') + '"')
+    !cond = !this.ConvertToDictionary(!where, false)
+    !sql.AppendArray(!this.buildWhereClause(!cond.keys))
+    if !columns.Size() eq 1 then
+        return !this.Query(!sql, 'STRING', !cond.values)
+    endif
+    return !this.Query(!sql, 'ARRAY', !cond.values)
+endmethod

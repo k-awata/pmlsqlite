@@ -1,0 +1,11 @@
+﻿-- PMLSQLITEPATH function returns the path of PMLSQLite.dll for the appropriate E3D/Administration version.
+define function !!PMLSQLITEPATH() is STRING
+    if Undefined(!!PMLSQLITEPATH) then
+        !myself = 'pmlsqlitepath.pmlfnc'
+        !!PMLSQLITEPATH = !!PML.GetPathName(!myself).Replace('/', '\').Replace(!myself, '', -1, 1) $
+            + !!module().product.Replace('AVEVA E3D Design', 'E3D').Replace('AVEVA Administration', 'ADM') $
+            + !!module().version.Substring(3, 3) $
+            + '\PMLSQLite'
+    endif
+    return !!PMLSQLITEPATH
+endfunction

@@ -1,0 +1,169 @@
+﻿define object pmlsqliteormTest
+endobject
+
+define method .testFormatNull(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !assert.equal('NULL', !db.FormatObject(object STRING()))
+endmethod
+
+define method .testFormatString(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !assert.equal('foo', !db.FormatObject('foo'))
+endmethod
+
+define method .testFormatReal(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !assert.equal('0.123e+20', !db.FormatObject(12300000000000000000))
+endmethod
+
+define method .testFormatTrue(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !assert.equal('TRUE', !db.FormatObject(true))
+endmethod
+
+define method .testFormatFalse(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !assert.equal('FALSE', !db.FormatObject(false))
+endmethod
+
+define method .testFormatDateTime(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !assert.equal('2020-01-23 04:56:42', !db.FormatObject(object DATETIME(2020, 1, 23, 4, 56, 42)))
+endmethod
+
+define method .testParseDateTime(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !assert.equal(object DATETIME(2020, 1, 23, 4, 56, 42), !db.ParseDateTime('2020-01-23 04:56:42'))
+endmethod
+
+define method .testPMLObjectData(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+
+    !records[1] = E 1000 N 2000 U 3000 WRT WORL
+    !records[2] = E 4000 N 5000 U 6000 WRT WORL
+    !records[3] = E 7000 N 8000 U 9000 WRT WORL
+
+    !db.CreateTable('mock', !records, true)
+    !db.Insert('mock', !records)
+    !actual = !db.Select('mock', 'POSITION', '{"east": 4000}').First()
+
+    !assert.equal(4000, !actual.east)
+    !assert.equal(5000, !actual.north)
+    !assert.equal(6000, !actual.up)
+    !assert.equal(WORL, !actual.origin)
+endmethod
+
+define method .testFileDB(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !file = object FILE('%temp%\pmlsqliteormTest.db')
+    !file.DeleteFile()
+
+    !records[1] = '{"id": null, "name": "Abby",    "height": 200, "flag": false}'
+    !records[2] = '{"id": null, "name": "Banshee", "height": 150, "flag": true }'
+    !records[3] = '{"id": null, "name": "Casper",  "height": 250, "flag": false}'
+
+    !dbw = object PMLSQLITEORM(!file.Name())
+    !assert.isFalse(!file.Exists())
+    !dbw.CreateTable('mock', !records, true)
+    !assert.isTrue(!file.Exists())
+
+    !dbr = object PMLSQLITEORM(!file.Name())
+    !dbw.BeginTransaction()
+    !dbw.Insert('mock', !records)
+    !assert.equal(0, !dbr.Select('mock', Split('id')).Size())
+    !dbw.Commit()
+    !assert.equal(3, !dbr.Select('mock', Split('id')).Size())
+endmethod
+
+define method .testRollback(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+
+    !records[1] = '{"id": null, "name": "Abby",    "height": 200, "flag": false}'
+    !records[2] = '{"id": null, "name": "Banshee", "height": 150, "flag": true }'
+    !records[3] = '{"id": null, "name": "Casper",  "height": 250, "flag": false}'
+
+    !db.CreateTable('mock', !records, true)
+    !db.BeginTransaction()
+    !db.Insert('mock', !records)
+    !assert.equal(3, !db.Select('mock', Split('id')).Size())
+    !db.Rollback()
+    !assert.equal(0, !db.Select('mock', Split('id')).Size())
+endmethod
+
+define method .testDropTable(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+
+    !db.CreateTable('mock', '{"id": 0, "name": "", "height": 0, "flag": false}', true)
+    !assert.equal('mock', !db.Select('sqlite_master', Split('name'), '{"type": "table"}').First())
+    !db.DropTable('mock')
+    !assert.isTrue(!db.Select('sqlite_master', Split('name'), '{"type": "table"}').Empty())
+endmethod
+
+define method .testInsert(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+
+    !db.CreateTable('mock', '{"id": 0, "name": "", "height": 0, "flag": false}', true)
+    !assert.equal(0, !db.Select('mock', Split('id')).Size())
+    !db.Insert('mock', '{"name": "Abby",    "height": 200, "flag": false}')
+    !db.Insert('mock', '{"name": "Banshee", "flag": true }')
+    !db.Insert('mock', '')
+    !assert.equal(3, !db.Select('mock', Split('id')).Size())
+endmethod
+
+define method .testUpdate(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+
+    !records[1] = '{"id": null, "name": "Abby",    "height": 200, "flag": false}'
+    !records[2] = '{"id": null, "name": "Banshee", "height": 150, "flag": true }'
+    !records[3] = '{"id": null, "name": "Casper",  "height": 250, "flag": false}'
+
+    !db.CreateTable('mock', !records, true)
+    !db.Insert('mock', !records)
+    !assert.equal('Banshee', !db.Select('mock', Split('name'), '{"id": 2}').First())
+    !db.Update('mock', '{"name": "modified"}', '{"id": 2}')
+    !assert.equal('modified', !db.Select('mock', Split('name'), '{"id": 2}').First())
+endmethod
+
+define method .testDelete(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+
+    !records[1] = '{"id": null, "name": "Abby",    "height": 200, "flag": false}'
+    !records[2] = '{"id": null, "name": "Banshee", "height": 150, "flag": true }'
+    !records[3] = '{"id": null, "name": "Casper",  "height": 250, "flag": false}'
+
+    !db.CreateTable('mock', !records, true)
+    !db.Insert('mock', !records)
+    !assert.equal(3, !db.Select('mock', Split('id')).Size())
+    !db.Delete('mock', '{"flag": false}')
+    !assert.equal(1, !db.Select('mock', Split('id')).Size())
+endmethod
+
+define method .testSelect(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+
+    !records[1] = '{"id": null, "name": "Abby",    "height": 200, "flag": false}'
+    !records[2] = '{"id": null, "name": "Banshee", "height": 150, "flag": true }'
+    !records[3] = '{"id": null, "name": "Casper",  "height": 250, "flag": false}'
+
+    !db.CreateTable('mock', !records, true)
+    !db.Insert('mock', !records)
+    !actual = !db.Select('mock', Split('name height flag'), '{"id": 2}').First()
+    
+    !assert.equal('Banshee', !actual[1])
+    !assert.equal(150, !actual[2])
+    !assert.equal('1', !actual[3])
+endmethod

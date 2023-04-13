@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <PMLNETPATH Condition=" '$(PMLNETPATH)'=='' ">C:\Program Files (x86)\AVEVA\Everything3D3.1\PMLNet.dll</PMLNETPATH>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PlatformTarget>x86</PlatformTarget>
+    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
+    <PublishRelease>true</PublishRelease>
+    <DebugType>none</DebugType>
+    <Copyright>Copyright (c) 2023 K.Awata</Copyright>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="PMLNet">
+      <HintPath>$(PMLNETPATH)</HintPath>
+      <Private>False</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Data.SQLite.Core" Version="1.0.117" />
+  </ItemGroup>
+
+</Project>
