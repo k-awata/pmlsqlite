@@ -1,4 +1,4 @@
-﻿!!PMLSQLITEPATH()
+!!PMLSQLITEPATH()
 import '$!!PMLSQLITEPATH'
 handle any
 endhandle
@@ -271,7 +271,7 @@ define method .Rollback()
     !this.Execute(!sql)
 endmethod
 
--- CreateTable method creates a table with the specified name and the definition as the specified PML object.
+-- CreateTable method creates a table with the specified name and a definition from a PML object.
 -- If the force flag is true, it attempts to drop the table before creating it.
 define method .CreateTable(!table is STRING, !schema is ANY, !force is BOOLEAN)
     !sql = object ARRAY()
@@ -283,11 +283,7 @@ define method .CreateTable(!table is STRING, !schema is ANY, !force is BOOLEAN)
 
     -- Create table
     !sql.Append('CREATE TABLE IF NOT EXISTS "' + !table.Replace('"', '') + '" (')
-    if !schema.ObjectType() eq 'ARRAY' then
-        !data = !this.ConvertToDictionary(!schema[1], true)
-    else
-        !data = !this.ConvertToDictionary(!schema, true)
-    endif
+    !data = !this.ConvertToDictionary(!schema, true)
     do !i to !data.keys.Size()
         !buf = '"' + !data.keys[!i] + '" '
         !type = !data.values[!i].ObjectType()
@@ -308,6 +304,12 @@ define method .CreateTable(!table is STRING, !schema is ANY, !force is BOOLEAN)
     !sql.Append(');')
 
     !this.Execute(!sql)
+endmethod
+
+-- CreateTable method creates a table with the specified name and a definition from the first of a PML objects array.
+-- If the force flag is true, it attempts to drop the table before creating it.
+define method .CreateTable(!table is STRING, !records is ARRAY, !force is BOOLEAN)
+    !this.CreateTable(!table, !records[1], !force)
 endmethod
 
 -- DropTable method removes the specified table.
