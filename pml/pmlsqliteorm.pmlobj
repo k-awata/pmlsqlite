@@ -1,4 +1,4 @@
-!!PMLSQLITEPATH()
+﻿!!PMLSQLITEPATH()
 import '$!!PMLSQLITEPATH'
 handle any
 endhandle
@@ -82,34 +82,8 @@ define method .ParseDateTime(!datetime is STRING) is DATETIME
     return object DATETIME(!year, !month, !day, !hour, !minute, !second)
 endmethod
 
--- ConvertToDictionary method returns a DICTIONARY object converted from a JSON string.
--- If !null flag is false, it omits keys with the null value.
-define method .ConvertToDictionary(!json is STRING, !null is BOOLEAN) is DICTIONARY
-    !dict = object DICTIONARY()
-    if !json.Unset() or !json eq '' then
-        return !dict
-    endif
-    !j = object JSON()
-    !j.Parse(!json, !dict)
-    return !this.ConvertToDictionary(!dict, !null)
-endmethod
-
--- ConvertToDictionary method returns the copied DICTIONARY object from a given DICTIONARY object.
--- If !null flag is false, it omits keys with the null value.
-define method .ConvertToDictionary(!src is DICTIONARY, !null is BOOLEAN) is DICTIONARY
-    !dict = object DICTIONARY()
-    do !i to !src.keys.Size()
-        !value = !src.values[!i]
-        if !null or !value.Set() then
-            !dict.SetValue(!src.keys[!i], !value, true)
-        endif
-        !value.Delete()
-    enddo
-    return !dict
-endmethod
-
 -- ConvertToDictionary method returns a DICTIONARY object converted from a PML object.
--- If !null flag is false, it omits keys with the null value.
+-- If the !null flag is false, it omits keys with the unset value.
 define method .ConvertToDictionary(!object is ANY, !null is BOOLEAN) is DICTIONARY
     !dict = object DICTIONARY()
     do !key values !object.Attributes()
@@ -119,6 +93,22 @@ define method .ConvertToDictionary(!object is ANY, !null is BOOLEAN) is DICTIONA
         endif
         !value.Delete()
     enddo
+    return !dict
+endmethod
+
+-- ConvertToDictionary method returns a DICTIONARY object converted from a JSON string.
+define method .ConvertToDictionary(!json is STRING, !null is BOOLEAN) is DICTIONARY
+    !dict = object DICTIONARY()
+    if !json.Unset() or !json eq '' then
+        return !dict
+    endif
+    !j = object JSON()
+    !j.Parse(!json, !dict)
+    return !dict
+endmethod
+
+-- ConvertToDictionary method returns the same DICTIONARY object from a given DICTIONARY object.
+define method .ConvertToDictionary(!dict is DICTIONARY, !null is BOOLEAN) is DICTIONARY
     return !dict
 endmethod
 
