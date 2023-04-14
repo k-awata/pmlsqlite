@@ -24,23 +24,46 @@ define method .PMLSQLITEORM(!filename is STRING)
 endmethod
 
 -- FormatObject method returns the formatted string used for SQL from the specified object.
-define method .FormatObject(!object is ANY) is STRING
-    !type = !object.ObjectType()
+define method .FormatObject(!object is STRING) is STRING
     if !object.Unset() then
         return 'NULL'
-    elseif !type eq 'STRING' then
-        return !object
-    elseif !type eq 'REAL' then
-        return !object.Value().String().Replace('EX', 'e')
-    elseif !type eq 'BOOLEAN' then
-        return !object.String().Upcase()
-    elseif !type eq 'DATETIME' then
-        return !object.Year().String() $
-            + '-' + Substring('0' + !object.Month().String(), -2, 2) $
-            + '-' + Substring('0' + !object.Date().String(), -2, 2) $
-            + ' ' + Substring('0' + !object.Hour().String(), -2, 2) $
-            + ':' + Substring('0' + !object.Minute().String(), -2, 2) $
-            + ':' + Substring('0' + !object.Second().String(), -2, 2)
+    endif
+    return !object
+endmethod
+
+-- FormatObject method returns the formatted string used for SQL from the specified object.
+define method .FormatObject(!object is REAL) is STRING
+    if !object.Unset() then
+        return 'NULL'
+    endif
+    return !object.Value().String().Replace('EX', 'e')
+endmethod
+
+-- FormatObject method returns the formatted string used for SQL from the specified object.
+define method .FormatObject(!object is BOOLEAN) is STRING
+    if !object.Unset() then
+        return 'NULL'
+    endif
+    return !object.String().Upcase()
+endmethod
+
+-- FormatObject method returns the formatted string used for SQL from the specified object.
+define method .FormatObject(!object is DATETIME) is STRING
+    if !object.Unset() then
+        return 'NULL'
+    endif
+    return !object.Year().String() $
+        + '-' + Substring('0' + !object.Month().String(), -2, 2) $
+        + '-' + Substring('0' + !object.Date().String(), -2, 2) $
+        + ' ' + Substring('0' + !object.Hour().String(), -2, 2) $
+        + ':' + Substring('0' + !object.Minute().String(), -2, 2) $
+        + ':' + Substring('0' + !object.Second().String(), -2, 2)
+endmethod
+
+-- FormatObject method returns the formatted string used for SQL from the specified object.
+define method .FormatObject(!object is ANY) is STRING
+    if !object.Unset() then
+        return 'NULL'
     endif
     return !object.String()
 endmethod
