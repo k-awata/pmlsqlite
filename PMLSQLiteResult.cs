@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Data.SQLite;
 using Aveva.Core.PMLNet;
 
@@ -93,11 +93,7 @@ namespace PMLSQLite
             for (int i = 0; i < dr.FieldCount; i++)
             {
                 double key = i + 1;
-                if (dr[i] is bool)
-                {
-                    row.Add(key, (bool)dr[i]);
-                }
-                else if (dr[i] is double)
+                if (dr[i] is double)
                 {
                     row.Add(key, (double)dr[i]);
                 }
