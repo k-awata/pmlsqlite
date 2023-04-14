@@ -1,4 +1,4 @@
-﻿define object pmlsqliteormTest
+define object pmlsqliteormTest
 endobject
 
 define method .testFormatNull(!assert is PmlAssert)
@@ -35,6 +35,27 @@ define method .testFormatDateTime(!assert is PmlAssert)
     using namespace 'PMLSQLite'
     !db = object PMLSQLITEORM()
     !assert.equal('2020-01-23 04:56:42', !db.FormatObject(object DATETIME(2020, 1, 23, 4, 56, 42)))
+endmethod
+
+define method .testFormatArray(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !assert.equal('["foo","bar","baz"]', !db.FormatObject(Split('foo bar baz')))
+endmethod
+
+define method .testFormatDictionary(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !dict = object DICTIONARY()
+    !dict.keys = Split('one two three')
+    !dict.values = Split('foo bar baz')
+    !assert.equal('{"one":"foo","two":"bar","three":"baz"}', !db.FormatObject(!dict))
+endmethod
+
+define method .testFormatObject(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !assert.equal('U WRT /*', !db.FormatObject( U WRT /* ))
 endmethod
 
 define method .testParseDateTime(!assert is PmlAssert)

@@ -1,4 +1,4 @@
-﻿!!PMLSQLITEPATH()
+!!PMLSQLITEPATH()
 import '$!!PMLSQLITEPATH'
 handle any
 endhandle
@@ -58,6 +58,32 @@ define method .FormatObject(!object is DATETIME) is STRING
         + ' ' + Substring('0' + !object.Hour().String(), -2, 2) $
         + ':' + Substring('0' + !object.Minute().String(), -2, 2) $
         + ':' + Substring('0' + !object.Second().String(), -2, 2)
+endmethod
+
+-- FormatObject method returns the formatted string used for SQL from the specified object.
+define method .FormatObject(!object is ARRAY) is STRING
+    if !object.Unset() then
+        return 'NULL'
+    endif
+    !j = object JSON()
+    !json = !j.String(!object)
+    handle any
+        return '[]'
+    endhandle
+    return !json
+endmethod
+
+-- FormatObject method returns the formatted string used for SQL from the specified object.
+define method .FormatObject(!object is DICTIONARY) is STRING
+    if !object.Unset() then
+        return 'NULL'
+    endif
+    !j = object JSON()
+    !json = !j.String(!object)
+    handle any
+        return '{}'
+    endhandle
+    return !json
 endmethod
 
 -- FormatObject method returns the formatted string used for SQL from the specified object.
@@ -216,6 +242,7 @@ define method .Query(!sql is ARRAY, !objtype is STRING, !param is ARRAY) is ARRA
     -- Fetch records
     !records = object ARRAY()
     !columns = !result.ColumnNames()
+    !json = object JSON()
     do
         break if not !result.Read()
         !object = object $!<objtype>()
@@ -236,16 +263,26 @@ define method .Query(!sql is ARRAY, !objtype is STRING, !param is ARRAY) is ARRA
             !object.values = !result.FetchRow()
         else
             do !key values !columns
-                !atty = !object.Attribute(!key).ObjectType()
+                -- Get attribute type
+                !attribute = !object.Attribute(!key)
                 handle any
                     skip
                 endhandle
+                !atty = !attribute.ObjectType()
+                !attribute.Delete()
                 if !atty eq 'STRING' then
                     !object.$!<key> = !result.Fetch(!key)
                 elseif !atty eq 'BOOLEAN' then
                     !object.$!<key> = !result.Fetch(!key).Real().Boolean()
                 elseif !atty eq 'DATETIME' then
                     !object.$!<key> = !this.ParseDateTime(!result.Fetch(!key))
+                elseif !atty inset('ARRAY', 'DICTIONARY') then
+                    !value = object $!<atty>()
+                    !json.Parse(!result.Fetch(!key), !value)
+                    handle any
+                    endhandle
+                    !object.$!<key> = !value
+                    !value.Delete()
                 else
                     !object.$!<key> = object $!<atty>(!result.Fetch(!key))
                     handle any
