@@ -1,4 +1,4 @@
-define object pmlsqliteormTest
+﻿define object pmlsqliteormTest
 endobject
 
 define method .testFormatNull(!assert is PmlAssert)
@@ -87,13 +87,14 @@ define method .testFileDB(!assert is PmlAssert)
     !file = object FILE('%temp%\pmlsqliteormTest.db')
     !file.DeleteFile()
 
-    !records[1] = '{"id": null, "name": "Abby",    "height": 200, "flag": false}'
-    !records[2] = '{"id": null, "name": "Banshee", "height": 150, "flag": true }'
-    !records[3] = '{"id": null, "name": "Casper",  "height": 250, "flag": false}'
+    !schema = '{"id": 0, "name": "", "height": 0, "flag": false}'
+    !records[1] = '{"name": "Abby",    "height": 200, "flag": false}'
+    !records[2] = '{"name": "Banshee", "height": 150, "flag": true }'
+    !records[3] = '{"name": "Casper",  "height": 250, "flag": false}'
 
     !dbw = object PMLSQLITEORM(!file.Name())
     !assert.isFalse(!file.Exists())
-    !dbw.CreateTable('mock', !records, true)
+    !dbw.CreateTable('mock', !schema, true)
     !assert.isTrue(!file.Exists())
 
     !dbr = object PMLSQLITEORM(!file.Name())
@@ -108,11 +109,12 @@ define method .testRollback(!assert is PmlAssert)
     using namespace 'PMLSQLite'
     !db = object PMLSQLITEORM()
 
-    !records[1] = '{"id": null, "name": "Abby",    "height": 200, "flag": false}'
-    !records[2] = '{"id": null, "name": "Banshee", "height": 150, "flag": true }'
-    !records[3] = '{"id": null, "name": "Casper",  "height": 250, "flag": false}'
+    !schema = '{"id": 0, "name": "", "height": 0, "flag": false}'
+    !records[1] = '{"name": "Abby",    "height": 200, "flag": false}'
+    !records[2] = '{"name": "Banshee", "height": 150, "flag": true }'
+    !records[3] = '{"name": "Casper",  "height": 250, "flag": false}'
 
-    !db.CreateTable('mock', !records, true)
+    !db.CreateTable('mock', !schema, true)
     !db.BeginTransaction()
     !db.Insert('mock', !records)
     !assert.equal(3, !db.Select('mock', Split('id')).Size())
@@ -124,7 +126,9 @@ define method .testDropTable(!assert is PmlAssert)
     using namespace 'PMLSQLite'
     !db = object PMLSQLITEORM()
 
-    !db.CreateTable('mock', '{"id": 0, "name": "", "height": 0, "flag": false}', true)
+    !schema = '{"id": 0, "name": "", "height": 0, "flag": false}'
+
+    !db.CreateTable('mock', !schema, true)
     !assert.equal('mock', !db.Select('sqlite_master', Split('name'), '{"type": "table"}').First())
     !db.DropTable('mock')
     !assert.isTrue(!db.Select('sqlite_master', Split('name'), '{"type": "table"}').Empty())
@@ -134,11 +138,16 @@ define method .testInsert(!assert is PmlAssert)
     using namespace 'PMLSQLite'
     !db = object PMLSQLITEORM()
 
-    !db.CreateTable('mock', '{"id": 0, "name": "", "height": 0, "flag": false}', true)
+    !schema = '{"id": 0, "name": "", "height": 0, "flag": false}'
+    !records[1] = '{"name": "Abby",    "height": 200, "flag": false}'
+    !records[2] = '{"name": "Banshee", "flag": true }'
+    !records[3] = ''
+
+    !db.CreateTable('mock', !schema, true)
     !assert.equal(0, !db.Select('mock', Split('id')).Size())
-    !db.Insert('mock', '{"name": "Abby",    "height": 200, "flag": false}')
-    !db.Insert('mock', '{"name": "Banshee", "flag": true }')
-    !db.Insert('mock', '')
+    !db.Insert('mock', !records[1])
+    !db.Insert('mock', !records[2])
+    !db.Insert('mock', !records[3])
     !assert.equal(3, !db.Select('mock', Split('id')).Size())
 endmethod
 
@@ -146,11 +155,12 @@ define method .testUpdate(!assert is PmlAssert)
     using namespace 'PMLSQLite'
     !db = object PMLSQLITEORM()
 
-    !records[1] = '{"id": null, "name": "Abby",    "height": 200, "flag": false}'
-    !records[2] = '{"id": null, "name": "Banshee", "height": 150, "flag": true }'
-    !records[3] = '{"id": null, "name": "Casper",  "height": 250, "flag": false}'
+    !schema = '{"id": 0, "name": "", "height": 0, "flag": false}'
+    !records[1] = '{"name": "Abby",    "height": 200, "flag": false}'
+    !records[2] = '{"name": "Banshee", "height": 150, "flag": true }'
+    !records[3] = '{"name": "Casper",  "height": 250, "flag": false}'
 
-    !db.CreateTable('mock', !records, true)
+    !db.CreateTable('mock', !schema, true)
     !db.Insert('mock', !records)
     !assert.equal('Banshee', !db.Select('mock', Split('name'), '{"id": 2}').First())
     !db.Update('mock', '{"name": "modified"}', '{"id": 2}')
@@ -161,11 +171,12 @@ define method .testDelete(!assert is PmlAssert)
     using namespace 'PMLSQLite'
     !db = object PMLSQLITEORM()
 
-    !records[1] = '{"id": null, "name": "Abby",    "height": 200, "flag": false}'
-    !records[2] = '{"id": null, "name": "Banshee", "height": 150, "flag": true }'
-    !records[3] = '{"id": null, "name": "Casper",  "height": 250, "flag": false}'
+    !schema = '{"id": 0, "name": "", "height": 0, "flag": false}'
+    !records[1] = '{"name": "Abby",    "height": 200, "flag": false}'
+    !records[2] = '{"name": "Banshee", "height": 150, "flag": true }'
+    !records[3] = '{"name": "Casper",  "height": 250, "flag": false}'
 
-    !db.CreateTable('mock', !records, true)
+    !db.CreateTable('mock', !schema, true)
     !db.Insert('mock', !records)
     !assert.equal(3, !db.Select('mock', Split('id')).Size())
     !db.Delete('mock', '{"flag": false}')
@@ -176,14 +187,14 @@ define method .testSelect(!assert is PmlAssert)
     using namespace 'PMLSQLite'
     !db = object PMLSQLITEORM()
 
-    !records[1] = '{"id": null, "name": "Abby",    "height": 200, "flag": false}'
-    !records[2] = '{"id": null, "name": "Banshee", "height": 150, "flag": true }'
-    !records[3] = '{"id": null, "name": "Casper",  "height": 250, "flag": false}'
+    !schema = '{"id": 0, "name": "", "height": 0, "flag": false}'
+    !records[1] = '{"name": "Abby",    "height": 200, "flag": false}'
+    !records[2] = '{"name": "Banshee", "height": 150, "flag": true }'
+    !records[3] = '{"name": "Casper",  "height": 250, "flag": false}'
 
-    !db.CreateTable('mock', !records, true)
+    !db.CreateTable('mock', !schema, true)
     !db.Insert('mock', !records)
     !actual = !db.Select('mock', Split('name height flag'), '{"id": 2}').First()
-    
     !assert.equal('Banshee', !actual[1])
     !assert.equal(150, !actual[2])
     !assert.equal('1', !actual[3])

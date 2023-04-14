@@ -1,4 +1,4 @@
-!!PMLSQLITEPATH()
+﻿!!PMLSQLITEPATH()
 import '$!!PMLSQLITEPATH'
 handle any
 endhandle
@@ -337,8 +337,10 @@ define method .CreateTable(!table is STRING, !schema is ANY, !force is BOOLEAN)
     do !i to !data.keys.Size()
         !buf = '"' + !data.keys[!i] + '" '
         !type = !data.values[!i].ObjectType()
-        if !data.keys[!i] eq !this.pkey then
+        if !data.keys[!i] eq !this.pkey and !type eq 'REAL' then
             !buf = !buf + 'INTEGER PRIMARY KEY'
+        elseif !data.keys[!i] eq !this.pkey then
+            !buf = !buf + 'TEXT PRIMARY KEY'
         elseif !type eq 'BOOLEAN' then
             !buf = !buf + 'INTEGER'
         elseif !type eq 'REAL' then
