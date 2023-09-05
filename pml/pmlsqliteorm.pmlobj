@@ -264,7 +264,7 @@ define method .Query(!sql is ARRAY, !objtype is STRING, !param is ARRAY) is ARRA
         else
             do !key values !columns
                 -- Get attribute type
-                !attribute = !object.Attribute(!key)
+                !attribute = !object.Attribute(!key.Upcase())
                 handle any
                     skip
                 endhandle
