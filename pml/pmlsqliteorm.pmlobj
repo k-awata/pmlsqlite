@@ -5,7 +5,6 @@ endhandle
 
 -- PMLSQLITEORM object provides ORM between PML objects and SQLite3 database.
 define object PMLSQLITEORM
-    using namespace 'PMLSQLite'
     member .conn is PMLSQLite
     member .pkey is STRING
 endobject
