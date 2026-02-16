@@ -61,7 +61,7 @@ namespace PMLSQLite
         public void SetDataSource(string filename)
         {
             var csb = new SQLiteConnectionStringBuilder(conn.ConnectionString);
-            csb.DataSource = Environment.ExpandEnvironmentVariables(filename);
+            csb.DataSource = Environment.ExpandEnvironmentVariables(filename).Replace(@"\\", @"\\\\");
             conn.ConnectionString = csb.ToString();
         }
 
