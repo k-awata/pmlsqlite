@@ -25,7 +25,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public void Assign(PMLSQLiteResult that)
         {
-            if (dr != null) dr.Dispose();
+            dr?.Dispose();
             dr = that.dr;
         }
 
@@ -132,9 +132,9 @@ namespace PMLSQLite
             for (int i = 0; i < dr.FieldCount; i++)
             {
                 double key = i + 1;
-                if (dr[i] is double)
+                if (dr[i] is double v)
                 {
-                    row.Add(key, (double)dr[i]);
+                    row.Add(key, v);
                 }
                 else
                 {

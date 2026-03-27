@@ -24,7 +24,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public void Assign(PMLSQLiteStatement that)
         {
-            if (cmd != null) cmd.Dispose();
+            cmd?.Dispose();
             cmd = that.cmd;
         }
 

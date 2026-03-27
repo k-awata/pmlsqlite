@@ -18,7 +18,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public PMLSQLite()
         {
-            conn = new SQLiteConnection("");
+            conn = new SQLiteConnection();
         }
 
         /// <summary>
@@ -34,7 +34,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public void Assign(PMLSQLite that)
         {
-            if (conn != null) conn.Dispose();
+            conn?.Dispose();
             conn = that.conn;
         }
 
@@ -60,8 +60,10 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public void SetDataSource(string filename)
         {
-            var csb = new SQLiteConnectionStringBuilder(conn.ConnectionString);
-            csb.DataSource = Environment.ExpandEnvironmentVariables(filename).Replace(@"\\", @"\\\\");
+            var csb = new SQLiteConnectionStringBuilder(conn.ConnectionString)
+            {
+                DataSource = Environment.ExpandEnvironmentVariables(filename).Replace(@"\\", @"\\\\")
+            };
             conn.ConnectionString = csb.ToString();
         }
 

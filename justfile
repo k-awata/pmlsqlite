@@ -1,3 +1,5 @@
+name := "PMLSQLite"
+
 @_default:
     just --list
 
@@ -5,7 +7,7 @@
 release ver msg:
     make clean prod
     rm -f *.zip
-    7z a PMLSQLite_{{ver}}.zip ./dist/* LICENSE README.md
+    7z a {{name}}_{{ver}}.zip ./dist/* LICENSE README.md
     git tag -a v{{ver}} -m "{{msg}}"
     git push origin v{{ver}}
-    gh release create -n "{{msg}}" v{{ver}} PMLSQLite_{{ver}}.zip
+    gh release create -n "{{msg}}" v{{ver}} {{name}}_{{ver}}.zip
