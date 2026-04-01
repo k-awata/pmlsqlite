@@ -12,7 +12,7 @@ TEST := $(patsubst $(PML_DIR)/%,$(DIST_DIR)/%,$(filter     %Test.pmlobj,$(wildca
 
 .PHONY: clean prod dev licenses
 
-dev: prod $(TEST)
+dev: $(VERDIRS) $(PML) $(TEST)
 
 prod: $(VERDIRS) $(PML) licenses
 
