@@ -11,3 +11,8 @@ release ver msg:
     git tag -a v{{ver}} -m "{{msg}}"
     git push origin v{{ver}}
     gh release create -n "{{msg}}" v{{ver}} {{name}}_{{ver}}.zip
+
+unrelease ver:
+    gh release delete v{{ver}}
+    git push origin --delete v{{ver}}
+    git tag -d v{{ver}}
