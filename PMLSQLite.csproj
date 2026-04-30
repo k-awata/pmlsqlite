@@ -30,7 +30,7 @@
       <PropertyGroup>
         <PlatformTarget>x64</PlatformTarget>
         <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-        <PMLNetPath>C:\Program Files\WindowsApps\AVEVA.UnifiedEngineering_4000.2512.416.5457_x64__rmxc60bdg8z8w\VFS\ProgramFilesX64\AVEVA\UE\PMLNet.dll</PMLNetPath>
+        <PMLNetPath>C:\Program Files\WindowsApps\AVEVA.UnifiedEngineering_4010.2604.210.1901_x64__rmxc60bdg8z8w\VFS\ProgramFilesX64\AVEVA\UE\PMLNet.dll</PMLNetPath>
       </PropertyGroup>
     </When>
   </Choose>
