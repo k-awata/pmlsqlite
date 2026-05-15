@@ -78,8 +78,7 @@ namespace PMLSQLite
             var names = new Hashtable();
             for (int i = 0; i < dr.FieldCount; i++)
             {
-                double key = i + 1;
-                names.Add(key, dr.GetName(i));
+                names.Add(i + 1.0, dr.GetName(i));
             }
             return names;
         }
@@ -94,8 +93,7 @@ namespace PMLSQLite
             var types = new Hashtable();
             for (int i = 0; i < dr.FieldCount; i++)
             {
-                double key = i + 1;
-                types.Add(key, dr.GetDataTypeName(i));
+                types.Add(i + 1.0, dr.GetDataTypeName(i));
             }
             return types;
         }
@@ -131,14 +129,13 @@ namespace PMLSQLite
             var row = new Hashtable();
             for (int i = 0; i < dr.FieldCount; i++)
             {
-                double key = i + 1;
                 if (dr[i] is double v)
                 {
-                    row.Add(key, v);
+                    row.Add(i + 1.0, v);
                 }
                 else
                 {
-                    row.Add(key, dr[i].ToString());
+                    row.Add(i + 1.0, dr[i].ToString());
                 }
             }
             return row;

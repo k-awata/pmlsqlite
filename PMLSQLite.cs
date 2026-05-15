@@ -167,7 +167,7 @@ namespace PMLSQLite
         public PMLSQLiteStatement Prepare(Hashtable stmt)
         {
             var sb = new StringBuilder();
-            for (double i = 1; i <= stmt.Count; i++)
+            for (double i = 1.0; i <= stmt.Count; i++)
             {
                 sb.Append(stmt[i]).Append("\r\n");
             }
