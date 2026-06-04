@@ -35,7 +35,10 @@ define method .FormatObject(!object is REAL) is STRING
     if !object.Unset() then
         return 'NULL'
     endif
-    return !object.Value().String().Replace('EX', 'e')
+    if !object.Unit().IsNull() then
+        return !object.Value().String().Replace('EX', 'e')
+    endif
+    return !object.String()
 endmethod
 
 -- FormatObject method returns the formatted string used for SQL from the specified object.
@@ -43,7 +46,15 @@ define method .FormatObject(!object is BOOLEAN) is STRING
     if !object.Unset() then
         return 'NULL'
     endif
-    return !object.String().Upcase()
+    return !object.String().UpCase()
+endmethod
+
+-- FormatObject method returns the formatted string used for SQL from the specified object.
+define method .FormatObject(!object is DBREF) is STRING
+    if !object.Unset() then
+        return 'NULL'
+    endif
+    return !object.name
 endmethod
 
 -- FormatObject method returns the formatted string used for SQL from the specified object.
@@ -64,8 +75,9 @@ define method .FormatObject(!object is ARRAY) is STRING
     if !object.Unset() then
         return 'NULL'
     endif
-    !j = object JSON()
-    !json = !j.String(!object)
+    using namespace 'PMLJsonNet'
+    !jobj = object PMLJSON()
+    !json = !jobj.Stringify(!object)
     handle any
         return '[]'
     endhandle
@@ -77,8 +89,9 @@ define method .FormatObject(!object is DICTIONARY) is STRING
     if !object.Unset() then
         return 'NULL'
     endif
-    !j = object JSON()
-    !json = !j.String(!object)
+    using namespace 'PMLJsonNet'
+    !jobj = object PMLJSON()
+    !json = !jobj.Stringify(!object)
     handle any
         return '{}'
     endhandle
@@ -130,33 +143,62 @@ define method .ParseDateTime(!datetime is STRING) is DATETIME
     return object DATETIME(!year, !month, !day, !hour, !minute, !second)
 endmethod
 
+-- ParseJsonArray method returns an ARRAY object from a JSON text.
+define method .ParseJsonArray(!json is STRING) is ARRAY
+    !array = object ARRAY()
+    if !json.Unset() or !json eq '' then
+        return !array
+    endif
+    using namespace 'PMLJsonNet'
+    !jobj = object PMLJSON()
+    !jobj.Parse(!json, !array)
+    handle any
+    endhandle
+    return !array
+endmethod
+
+-- ParseJsonObject method returns a DICTIONARY object from a JSON text.
+define method .ParseJsonObject(!json is STRING) is DICTIONARY
+    !dict = object DICTIONARY()
+    if !json.Unset() or !json eq '' then
+        return !dict
+    endif
+    using namespace 'PMLJsonNet'
+    !jobj = object PMLJSON()
+    !jobj.Parse(!json, !dict)
+    handle any
+    endhandle
+    return !dict
+endmethod
+
+-- ConvertToDictionary method returns a DICTIONARY object converted from a JSON string.
+-- If the !null flag is false, it omits keys with the unset value.
+define method .ConvertToDictionary(!json is STRING, !null is BOOLEAN) is DICTIONARY
+    return !this.ConvertToDictionary(!this.ParseJsonObject(!json), !null)
+endmethod
+
+-- ConvertToDictionary method returns the same DICTIONARY object from a given DICTIONARY object.
+-- If the !null flag is false, it omits keys with the unset value.
+define method .ConvertToDictionary(!dict is DICTIONARY, !null is BOOLEAN) is DICTIONARY
+    if not !null then
+        do !i indices !dict.keys
+            skip if !dict.values[!i].Set()
+            !dict.keys.DeleteFrom(!i, 1)
+            !dict.values.DeleteFrom(!i, 1)
+        enddo
+        !dict.keys.Compress()
+        !dict.values.Compress()
+    endif
+    return !dict
+endmethod
+
 -- ConvertToDictionary method returns a DICTIONARY object converted from a PML object.
 -- If the !null flag is false, it omits keys with the unset value.
 define method .ConvertToDictionary(!object is ANY, !null is BOOLEAN) is DICTIONARY
     !dict = object DICTIONARY()
     do !key values !object.Attributes()
-        !value = !object.Attribute(!key)
-        if !null or !value.Set() then
-            !dict.SetValue(!key.LowCase(), !value, true)
-        endif
-        !value.Delete()
+        !dict.SetValue(!key.LowCase(), !object.Attribute(!key), !null)
     enddo
-    return !dict
-endmethod
-
--- ConvertToDictionary method returns a DICTIONARY object converted from a JSON string.
-define method .ConvertToDictionary(!json is STRING, !null is BOOLEAN) is DICTIONARY
-    !dict = object DICTIONARY()
-    if !json.Unset() or !json eq '' then
-        return !dict
-    endif
-    !j = object JSON()
-    !j.Parse(!json, !dict)
-    return !dict
-endmethod
-
--- ConvertToDictionary method returns the same DICTIONARY object from a given DICTIONARY object.
-define method .ConvertToDictionary(!dict is DICTIONARY, !null is BOOLEAN) is DICTIONARY
     return !dict
 endmethod
 
@@ -241,10 +283,8 @@ define method .Query(!sql is ARRAY, !objtype is STRING, !param is ARRAY) is ARRA
     -- Fetch records
     !records = object ARRAY()
     !columns = !result.ColumnNames()
-    !json = object JSON()
     do
         break if not !result.Read()
-        !object = object $!<objtype>()
         if !objtype eq 'STRING' then
             !object = !result.Fetch(!columns[1])
         elseif !objtype eq 'REAL' then
@@ -258,36 +298,38 @@ define method .Query(!sql is ARRAY, !objtype is STRING, !param is ARRAY) is ARRA
         elseif !objtype eq 'ARRAY' then
             !object = !result.FetchRow()
         elseif !objtype eq 'DICTIONARY' then
+            !object = object DICTIONARY()
             !object.keys = !columns
             !object.values = !result.FetchRow()
         else
+            !object = object $!<objtype>()
             do !key values !columns
-                -- Get attribute type
-                !attribute = !object.Attribute(!key.Upcase())
+                !att = !key.UpCase()
+                !atttype = !object.Attribute(!att).ObjectType()
                 handle any
                     skip
                 endhandle
-                !atty = !attribute.ObjectType()
-                !attribute.Delete()
-                if !atty eq 'STRING' then
-                    !object.$!<key> = !result.Fetch(!key)
-                elseif !atty eq 'BOOLEAN' then
-                    !object.$!<key> = !result.Fetch(!key).Real().Boolean()
-                elseif !atty eq 'DATETIME' then
-                    !object.$!<key> = !this.ParseDateTime(!result.Fetch(!key))
-                elseif !atty inset('ARRAY', 'DICTIONARY') then
-                    !value = object $!<atty>()
-                    !json.Parse(!result.Fetch(!key), !value)
-                    handle any
-                    endhandle
-                    !object.$!<key> = !value
-                    !value.Delete()
+                if !atttype eq 'STRING' then
+                    !object.Attribute(!att) = !result.Fetch(!key)
+                elseif !atttype eq 'BOOLEAN' then
+                    !object.Attribute(!att) = !result.Fetch(!key).Real().Boolean()
+                elseif !atttype eq 'DATETIME' then
+                    !object.Attribute(!att) = !this.ParseDateTime(!result.Fetch(!key))
+                elseif !atttype eq 'ARRAY' then
+                    !object.Attribute(!att) = !this.ParseJsonArray(!result.Fetch(!key))
+                elseif !atttype eq 'DICTIONARY' then
+                    !object.Attribute(!att) = !this.ParseJsonObject(!result.Fetch(!key))
                 else
-                    !object.$!<key> = object $!<atty>(!result.Fetch(!key))
+                    !object.Attribute(!att) = object $!<atttype>(!result.Fetch(!key))
                     handle any
                     endhandle
                 endif
             enddo
+            if !object.Unset() and !columns.Size() eq 1 then
+                !object = object $!<objtype>(!result.Fetch(!columns[1]))
+                handle any
+                endhandle
+            endif
         endif
         !records.Append(!object)
     enddo
@@ -336,16 +378,21 @@ define method .CreateTable(!table is STRING, !schema is ANY, !force is BOOLEAN)
     do !i to !data.keys.Size()
         !buf = '"' + !data.keys[!i] + '" '
         !type = !data.values[!i].ObjectType()
-        if !data.keys[!i] eq !this.pkey and !type eq 'REAL' then
-            !buf = !buf + 'INTEGER PRIMARY KEY'
-        elseif !data.keys[!i] eq !this.pkey then
-            !buf = !buf + 'TEXT PRIMARY KEY'
+        if !type eq 'REAL' then
+            if !data.keys[!i] eq !this.pkey then
+                !buf = !buf + 'INTEGER'
+            elseif !data.values[!i].Unit().IsNull() then
+                !buf = !buf + 'REAL'
+            else
+                !buf = !buf + 'TEXT'
+            endif
         elseif !type eq 'BOOLEAN' then
             !buf = !buf + 'INTEGER'
-        elseif !type eq 'REAL' then
-            !buf = !buf + 'REAL'
         else
             !buf = !buf + 'TEXT'
+        endif
+        if !data.keys[!i] eq !this.pkey then
+            !buf = !buf + ' PRIMARY KEY'
         endif
         if !i ne !data.keys.Size() then
             !buf = !buf + ','
@@ -409,7 +456,9 @@ define method .Insert(!table is STRING, !records is ARRAY)
         !buf = '('
         do !i to !columns.Size()
             !value = !data.values[!data.keys.FindFirst(!columns[!i])]
-            if !value.Unset() or !value.ObjectType() inset('REAL', 'BOOLEAN') then
+            if !value.Unset() $
+            or !value.ObjectType() eq 'BOOLEAN' $
+            or (!value.ObjectType() eq 'REAL' and !value.Unit().IsNull()) then
                 !buf = !buf + !this.FormatObject(!value)
             else
                 !buf = !buf + |'| + !this.FormatObject(!value) + |'|

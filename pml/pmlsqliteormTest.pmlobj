@@ -13,7 +13,13 @@ define method .testFormatString(!assert is PmlAssert)
     !assert.equal('foo', !db.FormatObject('foo'))
 endmethod
 
-define method .testFormatReal(!assert is PmlAssert)
+define method .testFormatRealWithUnit(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !assert.equal('12.3mm', !db.FormatObject(12.3mm))
+endmethod
+
+define method .testFormatRealWithEx(!assert is PmlAssert)
     using namespace 'PMLSQLite'
     !db = object PMLSQLITEORM()
     !assert.equal('0.123e+20', !db.FormatObject(12300000000000000000))
@@ -29,6 +35,12 @@ define method .testFormatFalse(!assert is PmlAssert)
     using namespace 'PMLSQLite'
     !db = object PMLSQLITEORM()
     !assert.equal('FALSE', !db.FormatObject(false))
+endmethod
+
+define method .testFormatDBRef(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !assert.equal('/*', !db.FormatObject(object DBREF('/*')))
 endmethod
 
 define method .testFormatDateTime(!assert is PmlAssert)
@@ -64,22 +76,69 @@ define method .testParseDateTime(!assert is PmlAssert)
     !assert.equal(object DATETIME(2020, 1, 23, 4, 56, 42), !db.ParseDateTime('2020-01-23 04:56:42'))
 endmethod
 
+define method .testParseJsonArray(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !assert.equal(Split('foo bar baz'), !db.ParseJsonArray('["foo","bar","baz"]'))
+endmethod
+
+define method .testParseJsonObject(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !dict = object DICTIONARY()
+    !dict.keys = Split('one two three')
+    !dict.values = Split('foo bar baz')
+    !assert.equal(!dict, !db.ParseJsonObject('{"one":"foo","two":"bar","three":"baz"}'))
+endmethod
+
+define method .testConvertToDictionaryFromJson(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+
+    !dict = object DICTIONARY()
+    !dict.keys = Split('one two three')
+    !dict.values[1] = 'foo'
+    !dict.values[2] = object STRING()
+    !dict.values[3] = 'baz'
+    !assert.equal(!dict, !db.ConvertToDictionary('{"one":"foo","two":null,"three":"baz"}', true))
+
+    !dict.keys.Remove(2)
+    !dict.values.Remove(2)
+    !assert.equal(!dict, !db.ConvertToDictionary('{"one":"foo","two":null,"three":"baz"}', false))
+endmethod
+
+define method .testConvertToDictionaryFromObject(!assert is PmlAssert)
+    using namespace 'PMLSQLite'
+    !db = object PMLSQLITEORM()
+    !obj = object POSITION()
+    !obj.north = 1000mm
+
+    !dict = object DICTIONARY()
+    !dict.AppendValue('north', 1000mm)
+    !assert.equal(!dict, !db.ConvertToDictionary(!obj, false))
+
+    !dict.AppendValue('east', object REAL())
+    !dict.AppendValue('up', object REAL())
+    !dict.AppendValue('origin', object DBREF())
+    !dict.Sort()
+    !assert.equal(!dict, !db.ConvertToDictionary(!obj, true))
+endmethod
+
 define method .testPMLObjectData(!assert is PmlAssert)
     using namespace 'PMLSQLite'
     !db = object PMLSQLITEORM()
 
-    !records[1] = E 1000 N 2000 U 3000 WRT WORL
-    !records[2] = E 4000 N 5000 U 6000 WRT WORL
-    !records[3] = E 7000 N 8000 U 9000 WRT WORL
+    !records[1] = E 1000 N 2000 U 3000
+    !records[2] = E 4000 N 5000 U 6000
+    !records[3] = E 7000 N 8000 U 9000
 
     !db.CreateTable('mock', !records, true)
     !db.Insert('mock', !records)
-    !actual = !db.Select('mock', 'POSITION', '{"east": 4000}').First()
+    !actual = !db.Select('mock', 'POSITION', '{"east": "4000mm"}').First()
 
     !assert.equal(4000, !actual.east)
     !assert.equal(5000, !actual.north)
     !assert.equal(6000, !actual.up)
-    !assert.equal(WORL, !actual.origin)
 endmethod
 
 define method .testFileDB(!assert is PmlAssert)

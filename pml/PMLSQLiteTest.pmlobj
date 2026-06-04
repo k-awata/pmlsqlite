@@ -70,18 +70,21 @@ endmethod
 
 define method .testDbBackup(!assert is PmlAssert)
     using namespace 'PMLSQLite'
+    !file = object FILE('%temp%\PMLSQLiteBackupTest.db')
+    !file.DeleteFile()
+
     !src = object PMLSQLite()
     !dst = object PMLSQLite()
     !src.SetDataSource(':memory:')
-    !dst.SetDataSource(':memory:')
+    !dst.SetDataSource(!file.Name())
     !src.Open()
-    !dst.Open()
     !src.Prepare(!this.sampleData).Execute()
+    !dst.Open()
     !src.Backup(!dst)
+    !dst.Open()
 
-    !assert.equal('Banshee', !dst.Prepare(|SELECT name FROM pets WHERE id = 2;|).QueryOne())
-    !dst.Prepare(|DELETE FROM pets WHERE id = 2;|).Execute()
     !assert.equal('Banshee', !src.Prepare(|SELECT name FROM pets WHERE id = 2;|).QueryOne())
+    !assert.equal('Banshee', !dst.Prepare(|SELECT name FROM pets WHERE id = 2;|).QueryOne())
 
     !src.Close()
     !dst.Close()

@@ -6,9 +6,8 @@ DIST_DIR := dist
 SRC := $(CSPROJ) $(wildcard *.cs)
 VERDIRS := $(foreach ver,$(VERS),$(DIST_DIR)/$(ver)/$(BIN))
 PML_DIR := pml
-PMLJSON_DIR := pml-json
-PML  := $(patsubst $(PML_DIR)/%,$(DIST_DIR)/%,$(filter-out %Test.pmlobj,$(wildcard $(PML_DIR)/*))) $(DIST_DIR)/json.pmlobj
-TEST := $(patsubst $(PML_DIR)/%,$(DIST_DIR)/%,$(filter     %Test.pmlobj,$(wildcard $(PML_DIR)/*))) $(DIST_DIR)/jsonTest.pmlobj
+PML  := $(patsubst $(PML_DIR)/%,$(DIST_DIR)/%,$(filter-out %Test.pmlobj,$(wildcard $(PML_DIR)/*)))
+TEST := $(patsubst $(PML_DIR)/%,$(DIST_DIR)/%,$(filter     %Test.pmlobj,$(wildcard $(PML_DIR)/*)))
 
 .PHONY: clean prod dev licenses
 
@@ -28,6 +27,3 @@ $(DIST_DIR)/%/$(BIN): $(SRC)
 
 $(DIST_DIR)/%: $(PML_DIR)/%
 	cp $(PML_DIR)/$* $(DIST_DIR)
-
-$(DIST_DIR)/%: $(PMLJSON_DIR)/%
-	cp $(PMLJSON_DIR)/$* $(DIST_DIR)

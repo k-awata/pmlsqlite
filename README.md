@@ -4,13 +4,15 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
 
 ## Installation
 
-1. Download the zip archive from [Releases](https://github.com/k-awata/pmlsqlite/releases).
+1. Download the ZIP archive from the [pmlsqlite Releases](https://github.com/k-awata/pmlsqlite/releases).
 
-2. Extract files and folders from the zip archive and place them in a directory defined by the `PMLLIB` environment variable.
+2. Download the ZIP archive from the [pmljsonnet Releases](https://github.com/k-awata/pmljsonnet/releases) which is required as a dependency.
 
-3. Open an AVEVA product.
+3. Extract both archives and place their contents in a directory defined by the `PMLLIB` environment variable.
 
-4. Enter the following command in the Command Window:
+4. Open an AVEVA product.
+
+5. Enter the following command in the Command Window:
 
    ```pml2
    pml rehash all
@@ -20,18 +22,17 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
 
 ### Open Database
 
-* Definitions
+- Definitions
 
   ```pml2
   .PMLSQLITEORM()
   .PMLSQLITEORM(!filename is STRING)
   ```
 
-* Arguments
+- Arguments
+  - `!filename` - Path of a SQLite3 database file
 
-  * `!filename` - Path of a SQLite3 database file
-
-* Example
+- Example
 
   ```sql
   using namespace 'PMLSQLite'
@@ -45,19 +46,18 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
 
 ### Create Table
 
-* Definitions
+- Definitions
 
   ```pml2
   .CreateTable(!table is STRING, !schema is ANY, !force is BOOLEAN)
   ```
 
-* Arguments
+- Arguments
+  - `!table` - Table name
+  - `!schema` - Object or JSON string for the schema to define the table
+  - `!force` - If true, delete the existing table before creating the new table.
 
-  * `!table` - Table name
-  * `!schema` - Object or JSON string for the schema to define the table
-  * `!force` - If true, delete the existing table before creating the new table.
-
-* Example
+- Example
 
   ```sql
   using namespace 'PMLSQLite'
@@ -85,17 +85,16 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
 
 ### Drop Table
 
-* Definitions
+- Definitions
 
   ```pml2
   .DropTable(!table is STRING)
   ```
 
-* Arguments
+- Arguments
+  - `!table` - Table name
 
-  * `!table` - Table name
-
-* Example
+- Example
 
   ```sql
   using namespace 'PMLSQLite'
@@ -109,20 +108,19 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
 
 ### Insert
 
-* Definitions
+- Definitions
 
   ```pml2
   .Insert(!table is STRING, !record is ANY)
   .Insert(!table is STRING, !records is ARRAY)
   ```
 
-* Arguments
+- Arguments
+  - `!table` - Table name
+  - `!record` - Object or JSON string for the values to insert a new record
+  - `!records` - Array of objects or JSON strings for the values to bulk-insert new records
 
-  * `!table` - Table name
-  * `!record` - Object or JSON string for the values to insert a new record
-  * `!records` - Array of objects or JSON strings for the values to bulk-insert new records
-
-* Example
+- Example
 
   ```sql
   using namespace 'PMLSQLite'
@@ -147,19 +145,18 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
 
 ### Update
 
-* Definitions
+- Definitions
 
   ```pml2
   .Update(!table is STRING, !set is ANY, !where is ANY)
   ```
 
-* Arguments
+- Arguments
+  - `!table` - Table name
+  - `!set` - Object or JSON string for the values to update records
+  - `!where` - Condition for specifying records to update the values
 
-  * `!table` - Table name
-  * `!set` - Object or JSON string for the values to update records
-  * `!where` - Condition for specifying records to update the values
-
-* Example
+- Example
 
   ```sql
   using namespace 'PMLSQLite'
@@ -186,18 +183,17 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
 
 ### Delete
 
-* Definitions
+- Definitions
 
   ```pml2
   .Delete(!table is STRING, !where is ANY)
   ```
 
-* Arguments
+- Arguments
+  - `!table` - Table name
+  - `!where` - Condition for specifying records to delete
 
-  * `!table` - Table name
-  * `!where` - Condition for specifying records to delete
-
-* Example
+- Example
 
   ```sql
   using namespace 'PMLSQLite'
@@ -220,7 +216,7 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
 
 ### Select
 
-* Definitions
+- Definitions
 
   ```pml2
   .Select(!table is STRING, !objtype is STRING) is ARRAY
@@ -229,14 +225,13 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
   .Select(!table is STRING, !columns is ARRAY, !where is ANY) is ARRAY
   ```
 
-* Arguments
+- Arguments
+  - `!table` - Table name
+  - `!objtype` - Object type of the retrieved records
+  - `!columns` - Columns in the retrieved records
+  - `!where` - Condition for specifying records to extract
 
-  * `!table` - Table name
-  * `!objtype` - Object type of the retrieved records
-  * `!columns` - Columns in the retrieved records
-  * `!where` - Condition for specifying records to extract
-
-* Example
+- Example
 
   ```sql
   using namespace 'PMLSQLite'
@@ -273,7 +268,7 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
 
 ### Transactions
 
-* Definitions
+- Definitions
 
   ```pml2
   .BeginTransaction()
@@ -281,7 +276,7 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
   .Rollback()
   ```
 
-* Example
+- Example
 
   ```sql
   using namespace 'PMLSQLite'
@@ -298,7 +293,7 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
 
 ### Execute Raw SQL
 
-* Definitions
+- Definitions
 
   ```pml2
   .Execute(!sql is STRING)
@@ -311,13 +306,12 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
   .Query(!sql is ARRAY, !objtype is STRING, !param is ARRAY) is ARRAY
   ```
 
-* Arguments
+- Arguments
+  - `!sql` - SQL commands
+  - `!objtype` - Object type of the retrieved records
+  - `!param` - Parameters to bind on the placeholders
 
-  * `!sql` - SQL commands
-  * `!objtype` - Object type of the retrieved records
-  * `!param` - Parameters to bind on the placeholders
-
-* Example
+- Example
 
   ```sql
   using namespace 'PMLSQLite'

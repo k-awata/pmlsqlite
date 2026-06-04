@@ -11,7 +11,7 @@ namespace PMLSQLite
     /// Represents a connection between PML and SQLite database.
     /// </summary>
     [PMLNetCallable()]
-    public class PMLSQLite
+    public class PMLSQLite : IDisposable
     {
         private SQLiteConnection conn;
 
@@ -41,6 +41,14 @@ namespace PMLSQLite
         public override string ToString()
         {
             return conn.ConnectionString;
+        }
+
+        public void Dispose()
+        {
+            if (conn != null && IsOpen())
+            {
+                conn.Close();
+            }
         }
 
         /// <summary>
