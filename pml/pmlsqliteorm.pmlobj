@@ -78,9 +78,6 @@ define method .FormatObject(!object is ARRAY) is STRING
     using namespace 'PMLJsonNet'
     !jobj = object PMLJSON()
     !json = !jobj.Stringify(!object)
-    handle any
-        return '[]'
-    endhandle
     return !json
 endmethod
 
@@ -92,9 +89,6 @@ define method .FormatObject(!object is DICTIONARY) is STRING
     using namespace 'PMLJsonNet'
     !jobj = object PMLJSON()
     !json = !jobj.Stringify(!object)
-    handle any
-        return '{}'
-    endhandle
     return !json
 endmethod
 
@@ -104,6 +98,23 @@ define method .FormatObject(!object is ANY) is STRING
         return 'NULL'
     endif
     return !object.String()
+endmethod
+
+-- ParseValue method returns a object with the specified object type from the specified string.
+define method .ParseValue(!value is STRING, !objtype is STRING) is ANY
+    if !objtype eq 'STRING' then
+        return !value
+    elseif !objtype eq 'BOOLEAN' then
+        return !value.Real().Boolean()
+    elseif !objtype eq 'DATETIME' then
+        return !this.ParseDateTime(!value)
+    elseif !objtype eq 'ARRAY' then
+        return !this.ParseJsonArray(!value)
+    elseif !objtype eq 'DICTIONARY' then
+        return !this.ParseJsonObject(!value)
+    else
+        return object $!<objtype>(!value)
+    endif
 endmethod
 
 -- ParseDateTime method returns a DATETIME object from a text in ISO-8601 format.
@@ -152,8 +163,6 @@ define method .ParseJsonArray(!json is STRING) is ARRAY
     using namespace 'PMLJsonNet'
     !jobj = object PMLJSON()
     !jobj.Parse(!json, !array)
-    handle any
-    endhandle
     return !array
 endmethod
 
@@ -166,8 +175,6 @@ define method .ParseJsonObject(!json is STRING) is DICTIONARY
     using namespace 'PMLJsonNet'
     !jobj = object PMLJSON()
     !jobj.Parse(!json, !dict)
-    handle any
-    endhandle
     return !dict
 endmethod
 
@@ -285,51 +292,29 @@ define method .Query(!sql is ARRAY, !objtype is STRING, !param is ARRAY) is ARRA
     !columns = !result.ColumnNames()
     do
         break if not !result.Read()
-        if !objtype eq 'STRING' then
-            !object = !result.Fetch(!columns[1])
-        elseif !objtype eq 'REAL' then
-            !object = !result.Fetch(!columns[1]).Real()
-        elseif !objtype eq 'BOOLEAN' then
-            !object = !result.Fetch(!columns[1]).Real().Boolean()
-        elseif !objtype eq 'DATETIME' then
-            !object = !this.ParseDateTime(!result.Fetch(!columns[1]))
-        elseif !objtype eq 'DBREF' then
-            !object = !result.Fetch(!columns[1]).DBRef()
-        elseif !objtype eq 'ARRAY' then
+        if !objtype eq 'ARRAY' then
             !object = !result.FetchRow()
         elseif !objtype eq 'DICTIONARY' then
             !object = object DICTIONARY()
             !object.keys = !columns
             !object.values = !result.FetchRow()
+        elseif !objtype eq 'DBREF' then
+            !object = !result.Fetch(!columns[1]).DBRef()
         else
             !object = object $!<objtype>()
-            do !key values !columns
-                !att = !key.UpCase()
-                !atttype = !object.Attribute(!att).ObjectType()
-                handle any
-                    skip
-                endhandle
-                if !atttype eq 'STRING' then
-                    !object.Attribute(!att) = !result.Fetch(!key)
-                elseif !atttype eq 'BOOLEAN' then
-                    !object.Attribute(!att) = !result.Fetch(!key).Real().Boolean()
-                elseif !atttype eq 'DATETIME' then
-                    !object.Attribute(!att) = !this.ParseDateTime(!result.Fetch(!key))
-                elseif !atttype eq 'ARRAY' then
-                    !object.Attribute(!att) = !this.ParseJsonArray(!result.Fetch(!key))
-                elseif !atttype eq 'DICTIONARY' then
-                    !object.Attribute(!att) = !this.ParseJsonObject(!result.Fetch(!key))
-                else
-                    !object.Attribute(!att) = object $!<atttype>(!result.Fetch(!key))
+            if !object.Attributes().Size() ge 1 then
+                do !key values !columns
+                    !object.Attribute(!key.UpCase()) = !this.ParseValue(!result.Fetch(!key), !object.Attribute(!key.UpCase()).ObjectType())
                     handle any
+                        skip
                     endhandle
-                endif
-            enddo
-            if !object.Unset() and !columns.Size() eq 1 then
-                !object = object $!<objtype>(!result.Fetch(!columns[1]))
+                enddo
+            endif
+            handle (2,779)
+                !object = !this.ParseValue(!result.Fetch(!columns[1]), !objtype)
                 handle any
                 endhandle
-            endif
+            endhandle
         endif
         !records.Append(!object)
     enddo
