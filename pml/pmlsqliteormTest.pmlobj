@@ -37,12 +37,6 @@ define method .testFormatFalse(!assert is PmlAssert)
     !assert.equal('FALSE', !db.FormatObject(false))
 endmethod
 
-define method .testFormatDBRef(!assert is PmlAssert)
-    using namespace 'PMLSQLite'
-    !db = object PMLSQLITEORM()
-    !assert.equal('/*', !db.FormatObject(object DBREF('/*')))
-endmethod
-
 define method .testFormatDateTime(!assert is PmlAssert)
     using namespace 'PMLSQLite'
     !db = object PMLSQLITEORM()
@@ -83,10 +77,10 @@ define method .testParseBoolean(!assert is PmlAssert)
     !assert.isTrue(!db.ParseValue('1', 'BOOLEAN'))
 endmethod
 
-define method .testParseDBRef(!assert is PmlAssert)
+define method .testParseReal(!assert is PmlAssert)
     using namespace 'PMLSQLite'
     !db = object PMLSQLITEORM()
-    !assert.equal(object DBREF('/*'), !db.ParseValue('/*', 'DBREF'))
+    !assert.equal(12.3mm, !db.ParseValue('12.3mm', 'REAL'))
 endmethod
 
 define method .testParseDateTime(!assert is PmlAssert)
@@ -108,39 +102,6 @@ define method .testParseDictionary(!assert is PmlAssert)
     !dict.keys = Split('one two three')
     !dict.values = Split('foo bar baz')
     !assert.equal(!dict, !db.ParseValue('{"one":"foo","two":"bar","three":"baz"}', 'DICTIONARY'))
-endmethod
-
-define method .testConvertToDictionaryFromJson(!assert is PmlAssert)
-    using namespace 'PMLSQLite'
-    !db = object PMLSQLITEORM()
-
-    !dict = object DICTIONARY()
-    !dict.keys = Split('one two three')
-    !dict.values[1] = 'foo'
-    !dict.values[2] = object STRING()
-    !dict.values[3] = 'baz'
-    !assert.equal(!dict, !db.ConvertToDictionary('{"one":"foo","two":null,"three":"baz"}', true))
-
-    !dict.keys.Remove(2)
-    !dict.values.Remove(2)
-    !assert.equal(!dict, !db.ConvertToDictionary('{"one":"foo","two":null,"three":"baz"}', false))
-endmethod
-
-define method .testConvertToDictionaryFromObject(!assert is PmlAssert)
-    using namespace 'PMLSQLite'
-    !db = object PMLSQLITEORM()
-    !obj = object POSITION()
-    !obj.north = 1000mm
-
-    !dict = object DICTIONARY()
-    !dict.AppendValue('north', 1000mm)
-    !assert.equal(!dict, !db.ConvertToDictionary(!obj, false))
-
-    !dict.AppendValue('east', object REAL())
-    !dict.AppendValue('up', object REAL())
-    !dict.AppendValue('origin', object DBREF())
-    !dict.Sort()
-    !assert.equal(!dict, !db.ConvertToDictionary(!obj, true))
 endmethod
 
 define method .testPMLObjectData(!assert is PmlAssert)
@@ -240,9 +201,16 @@ define method .testUpdate(!assert is PmlAssert)
 
     !db.CreateTable('mock', !schema, true)
     !db.Insert('mock', !records)
-    !assert.equal('Banshee', !db.Select('mock', Split('name'), '{"id": 2}').First())
-    !db.Update('mock', '{"name": "modified"}', '{"id": 2}')
-    !assert.equal('modified', !db.Select('mock', Split('name'), '{"id": 2}').First())
+
+    !assert.equal('Abby', !db.Select('mock', Split('name'), '{"id": 1}').First())
+    !db.Update('mock', '{"name": "modified"}', '{"id": 1}')
+    !assert.equal('modified', !db.Select('mock', Split('name'), '{"id": 1}').First())
+
+    !data = !db.Select('mock', 'DICTIONARY', '{"id": 2}').First()
+    !assert.equal('Banshee', !data.values[!data.keys.FindFirst('name')])
+    !data.SetValue('name', 'modified')
+    !db.Update('mock', !data)
+    !assert.equal('modified', !db.Select('mock', Split('name'), !data).First())
 endmethod
 
 define method .testDelete(!assert is PmlAssert)

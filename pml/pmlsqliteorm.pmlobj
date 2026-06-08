@@ -50,14 +50,6 @@ define method .FormatObject(!object is BOOLEAN) is STRING
 endmethod
 
 -- FormatObject method returns the formatted string used for SQL from the specified object.
-define method .FormatObject(!object is DBREF) is STRING
-    if !object.Unset() then
-        return 'NULL'
-    endif
-    return !object.name
-endmethod
-
--- FormatObject method returns the formatted string used for SQL from the specified object.
 define method .FormatObject(!object is DATETIME) is STRING
     if !object.Unset() then
         return 'NULL'
@@ -179,23 +171,12 @@ define method .ParseJsonObject(!json is STRING) is DICTIONARY
 endmethod
 
 -- ConvertToDictionary method returns a DICTIONARY object converted from a JSON string.
--- If the !null flag is false, it omits keys with the unset value.
 define method .ConvertToDictionary(!json is STRING, !null is BOOLEAN) is DICTIONARY
-    return !this.ConvertToDictionary(!this.ParseJsonObject(!json), !null)
+    return !this.ParseJsonObject(!json)
 endmethod
 
 -- ConvertToDictionary method returns the same DICTIONARY object from a given DICTIONARY object.
--- If the !null flag is false, it omits keys with the unset value.
 define method .ConvertToDictionary(!dict is DICTIONARY, !null is BOOLEAN) is DICTIONARY
-    if not !null then
-        do !i indices !dict.keys
-            skip if !dict.values[!i].Set()
-            !dict.keys.DeleteFrom(!i, 1)
-            !dict.values.DeleteFrom(!i, 1)
-        enddo
-        !dict.keys.Compress()
-        !dict.values.Compress()
-    endif
     return !dict
 endmethod
 
@@ -223,6 +204,15 @@ define method .replaceSQLPlaceHolders(!sql is ARRAY) is ARRAY
     return !replaced
 endmethod
 
+define method .normalizeSpecialTypeParameter(!param is ANY) is ANY
+    if !param.ObjectType() inset('STRING', 'REAL', 'BOOLEAN') then
+        return !param
+    elseif !param.Set() then
+        return !this.FormatObject(!param)
+    endif
+    return object STRING()
+endmethod
+
 -- Execute method executes the specified SQL statement.
 define method .Execute(!sql is STRING)
     !array[1] = !sql
@@ -247,9 +237,9 @@ define method .Execute(!sql is ARRAY, !param is ARRAY)
     if not !this.conn.IsOpen() then
         !this.conn.Open()
     endif
-    !stmt = !this.conn.Prepare(!this.ReplaceSQLPlaceHolders(!sql))
+    !stmt = !this.conn.Prepare(!this.replaceSQLPlaceHolders(!sql))
     do !i to !param.Size()
-        !stmt.Bind('@' + !i.String(), !param[!i])
+        !stmt.Bind('@' + !i.String(), !this.normalizeSpecialTypeParameter(!param[!i]))
     enddo
     !stmt.Execute()
     if !this.conn.FileName() ne '' and !this.conn.AutoCommit() then
@@ -281,9 +271,9 @@ define method .Query(!sql is ARRAY, !objtype is STRING, !param is ARRAY) is ARRA
     if not !this.conn.IsOpen() then
         !this.conn.Open()
     endif
-    !stmt = !this.conn.Prepare(!this.ReplaceSQLPlaceHolders(!sql))
+    !stmt = !this.conn.Prepare(!this.replaceSQLPlaceHolders(!sql))
     do !i to !param.Size()
-        !stmt.Bind('@' + !i.String(), !param[!i])
+        !stmt.Bind('@' + !i.String(), !this.normalizeSpecialTypeParameter(!param[!i]))
     enddo
     !result = !stmt.Query()
 
@@ -421,7 +411,7 @@ define method .Insert(!table is STRING, !record is ANY)
         if !i ne !data.keys.Size() then
             !buf = !buf + ','
         endif
-        !bind.Append(!this.FormatObject(!data.values[!i]))
+        !bind.Append(!data.values[!i])
     enddo
     !buf = !buf + ')'
     !sql.Append(!buf)
@@ -441,8 +431,7 @@ define method .Insert(!table is STRING, !records is ARRAY)
         !buf = '('
         do !i to !columns.Size()
             !value = !data.values[!data.keys.FindFirst(!columns[!i])]
-            if !value.Unset() $
-            or !value.ObjectType() eq 'BOOLEAN' $
+            if !value.Unset() or !value.ObjectType() eq 'BOOLEAN' $
             or (!value.ObjectType() eq 'REAL' and !value.Unit().IsNull()) then
                 !buf = !buf + !this.FormatObject(!value)
             else
@@ -463,6 +452,17 @@ define method .Insert(!table is STRING, !records is ARRAY)
     !this.Execute(!sql)
 endmethod
 
+define method .createCondition(!data is ANY) is DICTIONARY
+    !cond = !this.ConvertToDictionary(!data, false)
+    !pkey = !cond.keys.FindFirst(!this.pkey)
+    if !pkey.Unset() then
+        return !cond
+    endif
+    !dict = object DICTIONARY()
+    !dict.AppendValue(!cond.keys[!pkey], !cond.values[!pkey])
+    return !dict
+endmethod
+
 define method .buildWhereClause(!columns is ARRAY) is ARRAY
     !sql = object ARRAY()
     if !columns.Empty() then
@@ -480,6 +480,11 @@ define method .buildWhereClause(!columns is ARRAY) is ARRAY
 endmethod
 
 -- Update method modifies the existing record with the specified PML object values.
+define method .Update(!table is STRING, !record is ANY)
+    !this.Update(!table, !record, !record)
+endmethod
+
+-- Update method modifies the existing record with the specified PML object values.
 -- Only records that match the specified where condition are updated.
 define method .Update(!table is STRING, !set is ANY, !where is ANY)
     !sql = object ARRAY()
@@ -488,17 +493,15 @@ define method .Update(!table is STRING, !set is ANY, !where is ANY)
     !sql.Append('UPDATE "' + !table.Replace('"', '') + '" SET')
     !data = !this.ConvertToDictionary(!set, false)
     do !i to !data.keys.Size()
-        !value = !this.FormatObject(!data.values[!i])
-        skip if !value eq 'NULL'
         !buf = '"' + !data.keys[!i] + '" = ?'
         if !i ne !data.keys.Size() then
             !buf = !buf + ','
         endif
         !sql.Append(!buf)
-        !bind.Append(!value)
+        !bind.Append(!data.values[!i])
     enddo
 
-    !cond = !this.ConvertToDictionary(!where, false)
+    !cond = !this.createCondition(!where)
     !sql.AppendArray(!this.buildWhereClause(!cond.keys))
     !bind.AppendArray(!cond.values)
 
@@ -510,7 +513,7 @@ endmethod
 define method .Delete(!table is STRING, !where is ANY)
     !sql = object ARRAY()
     !sql.Append('DELETE FROM "' + !table.Replace('"', '') + '"')
-    !cond = !this.ConvertToDictionary(!where, false)
+    !cond = !this.createCondition(!where)
     !sql.AppendArray(!this.buildWhereClause(!cond.keys))
     !this.Execute(!sql, !cond.values)
 endmethod
@@ -525,7 +528,7 @@ endmethod
 define method .Select(!table is STRING, !objtype is STRING, !where is ANY) is ARRAY
     !sql = object ARRAY()
     !sql.Append('SELECT * FROM "' + !table.Replace('"', '') + '"')
-    !cond = !this.ConvertToDictionary(!where, false)
+    !cond = !this.createCondition(!where)
     !sql.AppendArray(!this.buildWhereClause(!cond.keys))
     return !this.Query(!sql, !objtype, !cond.values)
 endmethod
@@ -540,7 +543,7 @@ endmethod
 define method .Select(!table is STRING, !columns is ARRAY, !where is ANY) is ARRAY
     !sql = object ARRAY()
     !sql.Append('SELECT ' + !columns.Join(',') + ' FROM "' + !table.Replace('"', '') + '"')
-    !cond = !this.ConvertToDictionary(!where, false)
+    !cond = !this.createCondition(!where)
     !sql.AppendArray(!this.buildWhereClause(!cond.keys))
     if !columns.Size() eq 1 then
         return !this.Query(!sql, 'STRING', !cond.values)
