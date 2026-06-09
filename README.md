@@ -65,10 +65,10 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
 
   -- Create a table from a DIRECTION object
   $* CREATE TABLE IF NOT EXISTS "directions" (
-  $*   "east" REAL,
-  $*   "north" REAL,
+  $*   "east" NUMERIC,
+  $*   "north" NUMERIC,
   $*   "origin" TEXT,
-  $*   "up" REAL
+  $*   "up" NUMERIC
   $* );
   !db.CreateTable('directions', object DIRECTION(), false)
 
@@ -77,7 +77,7 @@ PMLSQLite provides ORM between AVEVA PML2 language objects and SQLite3 databases
   $* CREATE TABLE IF NOT EXISTS "json" (
   $*   "id" INTEGER PRIMARY KEY,
   $*   "name" TEXT,
-  $*   "length" REAL,
+  $*   "length" NUMERIC,
   $*   "flag" INTEGER
   $* );
   !db.CreateTable('json', '{"id": 0, "name": "", "length": 0, "flag": false}', true)

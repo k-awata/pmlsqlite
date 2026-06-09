@@ -242,6 +242,6 @@ define method .testSelect(!assert is PmlAssert)
     !db.Insert('mock', !records)
     !actual = !db.Select('mock', Split('name height flag'), '{"id": 2}').First()
     !assert.equal('Banshee', !actual[1])
-    !assert.equal(150, !actual[2])
+    !assert.equal('150', !actual[2])
     !assert.equal('1', !actual[3])
 endmethod

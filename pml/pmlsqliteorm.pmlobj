@@ -36,7 +36,7 @@ define method .FormatObject(!object is REAL) is STRING
         return 'NULL'
     endif
     if !object.Unit().IsNull() then
-        return !object.Value().String().Replace('EX', 'e')
+        return !object.String().Replace('EX', 'e')
     endif
     return !object.String()
 endmethod
@@ -357,15 +357,13 @@ define method .CreateTable(!table is STRING, !schema is ANY, !force is BOOLEAN)
     !sql.Append('CREATE TABLE IF NOT EXISTS "' + !table.Replace('"', '') + '" (')
     !data = !this.ConvertToDictionary(!schema, true)
     do !i to !data.keys.Size()
-        !buf = '"' + !data.keys[!i] + '" '
+        !buf = '"' + !data.keys[!i].Replace('"', '') + '" '
         !type = !data.values[!i].ObjectType()
         if !type eq 'REAL' then
             if !data.keys[!i] eq !this.pkey then
                 !buf = !buf + 'INTEGER'
-            elseif !data.values[!i].Unit().IsNull() then
-                !buf = !buf + 'REAL'
             else
-                !buf = !buf + 'TEXT'
+                !buf = !buf + 'NUMERIC'
             endif
         elseif !type eq 'BOOLEAN' then
             !buf = !buf + 'INTEGER'
@@ -441,7 +439,7 @@ define method .Insert(!table is STRING, !records is ARRAY)
             or (!value.ObjectType() eq 'REAL' and !value.Unit().IsNull()) then
                 !buf = !buf + !this.FormatObject(!value)
             else
-                !buf = !buf + |'| + !this.FormatObject(!value) + |'|
+                !buf = !buf + |'| + !this.FormatObject(!value).Replace(|'|, |''|) + |'|
             endif
             if !i ne !columns.Size() then
                 !buf = !buf + ','
@@ -476,7 +474,7 @@ define method .buildWhereClause(!columns is ARRAY) is ARRAY
     endif
     !sql.Append('WHERE')
     do !i to !columns.Size()
-        !buf = '"' + !columns[!i] + '" = ?'
+        !buf = '"' + !columns[!i].Replace('"', '') + '" = ?'
         if !i ne !columns.Size() then
             !buf = !buf + ' AND'
         endif
@@ -499,7 +497,7 @@ define method .Update(!table is STRING, !set is ANY, !where is ANY)
     !sql.Append('UPDATE "' + !table.Replace('"', '') + '" SET')
     !data = !this.ConvertToDictionary(!set, false)
     do !i to !data.keys.Size()
-        !buf = '"' + !data.keys[!i] + '" = ?'
+        !buf = '"' + !data.keys[!i].Replace('"', '') + '" = ?'
         if !i ne !data.keys.Size() then
             !buf = !buf + ','
         endif
