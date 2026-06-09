@@ -207,10 +207,8 @@ endmethod
 define method .normalizeSpecialTypeParameter(!param is ANY) is ANY
     if !param.ObjectType() inset('STRING', 'REAL', 'BOOLEAN') then
         return !param
-    elseif !param.Set() then
-        return !this.FormatObject(!param)
     endif
-    return object STRING()
+    return !this.FormatObject(!param)
 endmethod
 
 -- Execute method executes the specified SQL statement.
@@ -239,7 +237,11 @@ define method .Execute(!sql is ARRAY, !param is ARRAY)
     endif
     !stmt = !this.conn.Prepare(!this.replaceSQLPlaceHolders(!sql))
     do !i to !param.Size()
-        !stmt.Bind('@' + !i.String(), !this.normalizeSpecialTypeParameter(!param[!i]))
+        if !param[!i].Unset() then
+            !stmt.BindNull('@' + !i.String())
+        else
+            !stmt.Bind('@' + !i.String(), !this.normalizeSpecialTypeParameter(!param[!i]))
+        endif
     enddo
     !stmt.Execute()
     if !this.conn.FileName() ne '' and !this.conn.AutoCommit() then
@@ -273,7 +275,11 @@ define method .Query(!sql is ARRAY, !objtype is STRING, !param is ARRAY) is ARRA
     endif
     !stmt = !this.conn.Prepare(!this.replaceSQLPlaceHolders(!sql))
     do !i to !param.Size()
-        !stmt.Bind('@' + !i.String(), !this.normalizeSpecialTypeParameter(!param[!i]))
+        if !param[!i].Unset() then
+            !stmt.BindNull('@' + !i.String())
+        else
+            !stmt.Bind('@' + !i.String(), !this.normalizeSpecialTypeParameter(!param[!i]))
+        endif
     enddo
     !result = !stmt.Query()
 

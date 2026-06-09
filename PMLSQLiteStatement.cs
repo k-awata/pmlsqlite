@@ -34,6 +34,18 @@ namespace PMLSQLite
         }
 
         /// <summary>
+        /// Binds a NULL value to the specified placeholder name.
+        /// </summary>
+        /// <param name="param">Placeholder name</param>
+        /// <returns>This instance itself</returns>
+        [PMLNetCallable()]
+        public PMLSQLiteStatement BindNull(string param)
+        {
+            cmd.Parameters.AddWithValue(param, null);
+            return this;
+        }
+
+        /// <summary>
         /// Binds a parameter to the specified placeholder name.
         /// </summary>
         /// <param name="param">Placeholder name</param>

@@ -6,7 +6,7 @@
     <PublishRelease>true</PublishRelease>
     <DebugType>none</DebugType>
     <Copyright>Copyright (c) 2026 K.Awata</Copyright>
-    <Version>0.3.0</Version>
+    <Version>0.3.1</Version>
   </PropertyGroup>
 
   <Choose>
