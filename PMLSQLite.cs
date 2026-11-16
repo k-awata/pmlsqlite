@@ -13,12 +13,12 @@ namespace PMLSQLite
     [PMLNetCallable()]
     public class PMLSQLite : IDisposable
     {
-        private SQLiteConnection conn;
+        private SQLiteConnection _conn;
 
         [PMLNetCallable()]
         public PMLSQLite()
         {
-            conn = new SQLiteConnection();
+            _conn = new SQLiteConnection();
         }
 
         /// <summary>
@@ -28,26 +28,26 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public PMLSQLite(string constr)
         {
-            conn = new SQLiteConnection(constr);
+            _conn = new SQLiteConnection(constr);
         }
 
         [PMLNetCallable()]
         public void Assign(PMLSQLite that)
         {
-            conn?.Dispose();
-            conn = that.conn;
+            _conn?.Dispose();
+            _conn = that._conn;
         }
 
         public override string ToString()
         {
-            return conn.ConnectionString;
+            return _conn.ConnectionString;
         }
 
         public void Dispose()
         {
-            if (conn != null && IsOpen())
+            if (_conn != null && IsOpen())
             {
-                conn.Close();
+                _conn.Close();
             }
         }
 
@@ -58,7 +58,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public string FileName()
         {
-            return conn.FileName;
+            return _conn.FileName;
         }
 
         /// <summary>
@@ -68,11 +68,11 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public void SetDataSource(string filename)
         {
-            var csb = new SQLiteConnectionStringBuilder(conn.ConnectionString)
+            var csb = new SQLiteConnectionStringBuilder(_conn.ConnectionString)
             {
                 DataSource = Environment.ExpandEnvironmentVariables(filename).Replace(@"\\", @"\\\\")
             };
-            conn.ConnectionString = csb.ToString();
+            _conn.ConnectionString = csb.ToString();
         }
 
         /// <summary>
@@ -81,7 +81,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public void Open()
         {
-            conn.Open();
+            _conn.Open();
         }
 
         /// <summary>
@@ -90,7 +90,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public void Close()
         {
-            conn.Close();
+            _conn.Close();
         }
 
         /// <summary>
@@ -100,7 +100,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public bool IsOpen()
         {
-            return (conn.State & ConnectionState.Open) == ConnectionState.Open;
+            return (_conn.State & ConnectionState.Open) == ConnectionState.Open;
         }
 
         /// <summary>
@@ -110,7 +110,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public string Version()
         {
-            return conn.ServerVersion;
+            return _conn.ServerVersion;
         }
 
         /// <summary>
@@ -120,7 +120,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public void Backup(PMLSQLite dest)
         {
-            conn.BackupDatabase(dest.conn, dest.conn.Database, conn.Database, -1, null, -1);
+            _conn.BackupDatabase(dest._conn, dest._conn.Database, _conn.Database, -1, null, -1);
         }
 
         /// <summary>
@@ -130,7 +130,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public bool AutoCommit()
         {
-            return conn.AutoCommit;
+            return _conn.AutoCommit;
         }
 
         /// <summary>
@@ -140,7 +140,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public double Changes()
         {
-            return conn.Changes;
+            return _conn.Changes;
         }
 
         /// <summary>
@@ -150,7 +150,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public double LastInsertRowId()
         {
-            return conn.LastInsertRowId;
+            return _conn.LastInsertRowId;
         }
 
         /// <summary>
@@ -161,7 +161,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public PMLSQLiteStatement Prepare(string stmt)
         {
-            var cmd = conn.CreateCommand();
+            var cmd = _conn.CreateCommand();
             cmd.CommandText = stmt;
             return new PMLSQLiteStatement(cmd);
         }

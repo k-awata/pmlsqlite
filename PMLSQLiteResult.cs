@@ -10,23 +10,23 @@ namespace PMLSQLite
     [PMLNetCallable()]
     public class PMLSQLiteResult
     {
-        private SQLiteDataReader dr;
+        private SQLiteDataReader _dr;
 
         [PMLNetCallable()]
         public PMLSQLiteResult()
         {
         }
 
-        public PMLSQLiteResult(SQLiteDataReader r)
+        public PMLSQLiteResult(SQLiteDataReader dr)
         {
-            dr = r;
+            _dr = dr;
         }
 
         [PMLNetCallable()]
         public void Assign(PMLSQLiteResult that)
         {
-            dr?.Dispose();
-            dr = that.dr;
+            _dr?.Dispose();
+            _dr = that._dr;
         }
 
         /// <summary>
@@ -35,7 +35,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public void Close()
         {
-            dr.Close();
+            _dr.Close();
         }
 
         /// <summary>
@@ -45,7 +45,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public bool IsClosed()
         {
-            return dr.IsClosed;
+            return _dr.IsClosed;
         }
 
         /// <summary>
@@ -55,7 +55,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public bool NextResult()
         {
-            return dr.NextResult();
+            return _dr.NextResult();
         }
 
         /// <summary>
@@ -65,7 +65,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public bool HasRows()
         {
-            return dr.HasRows;
+            return _dr.HasRows;
         }
 
         /// <summary>
@@ -76,9 +76,9 @@ namespace PMLSQLite
         public Hashtable ColumnNames()
         {
             var names = new Hashtable();
-            for (int i = 0; i < dr.FieldCount; i++)
+            for (int i = 0; i < _dr.FieldCount; i++)
             {
-                names.Add(i + 1.0, dr.GetName(i));
+                names.Add(i + 1.0, _dr.GetName(i));
             }
             return names;
         }
@@ -91,9 +91,9 @@ namespace PMLSQLite
         public Hashtable ColumnTypes()
         {
             var types = new Hashtable();
-            for (int i = 0; i < dr.FieldCount; i++)
+            for (int i = 0; i < _dr.FieldCount; i++)
             {
-                types.Add(i + 1.0, dr.GetDataTypeName(i));
+                types.Add(i + 1.0, _dr.GetDataTypeName(i));
             }
             return types;
         }
@@ -105,7 +105,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public bool Read()
         {
-            return dr.Read();
+            return _dr.Read();
         }
 
         /// <summary>
@@ -116,7 +116,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public string Fetch(string name)
         {
-            return dr[name].ToString();
+            return _dr[name].ToString();
         }
 
         /// <summary>
@@ -127,15 +127,15 @@ namespace PMLSQLite
         public Hashtable FetchRow()
         {
             var row = new Hashtable();
-            for (int i = 0; i < dr.FieldCount; i++)
+            for (int i = 0; i < _dr.FieldCount; i++)
             {
-                if (dr[i] is double v)
+                if (_dr[i] is double v)
                 {
                     row.Add(i + 1.0, v);
                 }
                 else
                 {
-                    row.Add(i + 1.0, dr[i].ToString());
+                    row.Add(i + 1.0, _dr[i].ToString());
                 }
             }
             return row;

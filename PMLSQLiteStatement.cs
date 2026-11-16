@@ -9,7 +9,7 @@ namespace PMLSQLite
     [PMLNetCallable()]
     public class PMLSQLiteStatement
     {
-        private SQLiteCommand cmd;
+        private SQLiteCommand _cmd;
 
         [PMLNetCallable()]
         public PMLSQLiteStatement()
@@ -18,19 +18,19 @@ namespace PMLSQLite
 
         public PMLSQLiteStatement(SQLiteCommand c)
         {
-            cmd = c;
+            _cmd = c;
         }
 
         [PMLNetCallable()]
         public void Assign(PMLSQLiteStatement that)
         {
-            cmd?.Dispose();
-            cmd = that.cmd;
+            _cmd?.Dispose();
+            _cmd = that._cmd;
         }
 
         public override string ToString()
         {
-            return cmd.CommandText;
+            return _cmd.CommandText;
         }
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public PMLSQLiteStatement BindNull(string param)
         {
-            cmd.Parameters.AddWithValue(param, null);
+            _cmd.Parameters.AddWithValue(param, null);
             return this;
         }
 
@@ -54,7 +54,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public PMLSQLiteStatement Bind(string param, string value)
         {
-            cmd.Parameters.AddWithValue(param, value);
+            _cmd.Parameters.AddWithValue(param, value);
             return this;
         }
 
@@ -67,7 +67,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public PMLSQLiteStatement Bind(string param, double value)
         {
-            cmd.Parameters.AddWithValue(param, value);
+            _cmd.Parameters.AddWithValue(param, value);
             return this;
         }
 
@@ -80,7 +80,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public PMLSQLiteStatement Bind(string param, bool value)
         {
-            cmd.Parameters.AddWithValue(param, value);
+            _cmd.Parameters.AddWithValue(param, value);
             return this;
         }
 
@@ -90,7 +90,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public void Execute()
         {
-            cmd.ExecuteNonQuery();
+            _cmd.ExecuteNonQuery();
         }
 
         /// <summary>
@@ -100,7 +100,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public string QueryOne()
         {
-            return cmd.ExecuteScalar().ToString();
+            return _cmd.ExecuteScalar().ToString();
         }
 
         /// <summary>
@@ -110,7 +110,7 @@ namespace PMLSQLite
         [PMLNetCallable()]
         public PMLSQLiteResult Query()
         {
-            return new PMLSQLiteResult(cmd.ExecuteReader());
+            return new PMLSQLiteResult(_cmd.ExecuteReader());
         }
     }
 }
